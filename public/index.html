@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <meta name="description" content="Send files directly between nearby devices. No account required.">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <title>NearSend — Send files nearby</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="NearSend home"><span class="brand-mark" aria-hidden="true">N</span><span>NearSend</span></a>
+    <div class="device-self">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span class="muted">Your device</span>
+      <button id="renameButton" class="name-chip" type="button" title="Rename this device">Connecting… <span aria-hidden="true">✎</span></button>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <div>
+        <p class="eyebrow">PRIVATE FILE SHARING</p>
+        <h1>Send files.<br><span class="muted-heading">Not links.</span></h1>
+        <p class="lead">Send files to nearby devices. No account, no uploads, no fuss.</p>
+      </div>
+      <div class="intro-note"><span class="lock-icon" aria-hidden="true">↔</span><span>Direct device-to-device transfer when possible.</span></div>
+    </section>
+
+    <section id="shareBox" class="share-box" hidden>
+      <div class="share-copy">
+        <p class="section-label">JOIN FROM ANOTHER DEVICE</p>
+        <p class="share-help">Open this address on a device connected to the same Wi-Fi or hotspot.</p>
+        <div class="url-row"><code id="shareUrl">Loading address…</code><button id="copyButton" class="button secondary" type="button">Copy</button></div>
+        <p class="tiny-note">Local mode works without internet. Keep this host running.</p>
+      </div>
+      <div id="qr" class="qr-box" aria-label="QR code for this address"></div>
+    </section>
+
+    <section class="devices-section">
+      <div class="section-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2></div><span id="connectionLabel" class="connection-label">Connecting…</span></div>
+      <div id="deviceList" class="device-grid" aria-live="polite" aria-label="Nearby devices"></div>
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon" aria-hidden="true">⌁</div>
+        <h3>No devices found</h3>
+        <p>Open NearSend on another device connected to the same network.</p>
+        <div class="tips"><span>01 &nbsp; Use the same Wi-Fi or hotspot</span><span>02 &nbsp; No internet needed in local mode</span></div>
+      </div>
+    </section>
+
+    <section id="transfersSection" class="transfers-section" hidden>
+      <div class="section-head"><div><p class="section-label">LIVE ACTIVITY</p><h2>Transfers</h2></div><button id="clearTransfers" class="text-button" type="button">Clear completed</button></div>
+      <div id="transfersList" class="transfer-list"></div>
+    </section>
+    <p class="keep-open" id="keepOpen" hidden>Keep this tab open until the transfer finishes.</p>
+  </main>
+  <footer><span id="footerStatus">Starting NearSend…</span><span>Files are not stored by NearSend.</span></footer>
+
+  <input id="fileInput" type="file" multiple hidden>
+  <div id="dialogBackdrop" class="backdrop" hidden>
+    <section id="receiveDialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogDescription">
+      <p class="section-label">INCOMING TRANSFER</p><h2 id="dialogTitle">Incoming file</h2>
+      <p id="dialogDescription" class="dialog-description"></p>
+      <div class="incoming-file"><span class="file-icon" aria-hidden="true">↧</span><div><strong id="incomingName"></strong><span id="incomingMeta" class="muted"></span></div></div>
+      <p id="largeFileWarning" class="warning" hidden>This file may use a lot of memory on this device.</p>
+      <div class="dialog-actions"><button id="declineButton" class="button secondary" type="button">Decline</button><button id="acceptButton" class="button primary" type="button">Accept file</button></div>
+    </section>
+  </div>
+  <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
