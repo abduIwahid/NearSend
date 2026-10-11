@@ -5,7 +5,7 @@ export function connect({ onHello, onPeers, onSignal, onRelay, onBinary, onStatu
     if (stopped) return;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const query = room ? `?room=${encodeURIComponent(room)}` : '';
-    ws = new WebSocket(`${proto}://${location.host}/${query}`);
+    ws = new WebSocket(`${proto}://${location.host}/api/ws${query}`);
     ws.binaryType = 'arraybuffer';
     ws.onopen = () => { retry = 1000; onStatus('connected'); };
     ws.onmessage = e => {

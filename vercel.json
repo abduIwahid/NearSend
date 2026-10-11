@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "outputDirectory": "public",
+  "functions": {
+    "api/ws.js": {
+      "includeFiles": "server/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/ws", "destination": "/api/ws" }
+  ]
+}
