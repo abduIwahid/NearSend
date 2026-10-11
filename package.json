@@ -1,0 +1,16 @@
+{
+  "name": "nearsend",
+  "version": "1.0.0",
+  "description": "Private, browser-based file sharing between nearby devices",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.18.0",
+    "qrcode": "^1.5.4"
+  }
+}
