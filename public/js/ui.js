@@ -20,26 +20,21 @@ export class UI {
       }
     });
   }
-  renderDevices(list,onRequest) {
+  renderDevices(list,onPick) {
     this.deviceList.replaceChildren(); this.count.textContent=list.length;
     this.empty.hidden=list.length>0;
     for(const p of list){
-      const card=document.createElement('article'); card.className='device-card';
+      const b=document.createElement('button'); b.type='button'; b.className='device-card';
+      b.setAttribute('aria-label',`Send file to ${p.name}`);
       const ico=document.createElement('span');ico.className='device-icon';ico.setAttribute('aria-hidden','true');ico.textContent=iconFor(p.deviceType);
       const name=document.createElement('span');name.className='device-name';name.textContent=p.name;
-      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType;
-      const button=document.createElement('button');button.type='button';button.className='button primary small-button';button.textContent='Request to connect';button.addEventListener('click',()=>onRequest(p));
-      card.append(ico,name,type,button); this.deviceList.append(card);
+      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType;const action=document.createElement('span');action.className='device-connect-label';action.textContent='Request to connect →';
+      b.append(ico,name,type,action); b.addEventListener('click',()=>onPick(p));
+      b.addEventListener('dragover',e=>{e.preventDefault();b.classList.add('dragover')});
+      b.addEventListener('dragleave',()=>b.classList.remove('dragover'));
+      b.addEventListener('drop',e=>{e.preventDefault();b.classList.remove('dragover');if(e.dataTransfer.files.length)onPick(p,e.dataTransfer.files)});
+      this.deviceList.append(b);
     }
-  }
-  askPairRequest(meta,onAccept,onReject) {
-    const backdrop=$('pairRequestBackdrop');
-    $('pairRequestDescription').textContent=`${meta.name || 'A nearby device'} wants to connect to your device for file sharing. Accept only if you recognize this request.`;
-    backdrop.hidden=false;
-    const accept=$('acceptPairButton'), reject=$('rejectPairButton');
-    const finish=(accepted)=>{backdrop.hidden=true;accept.removeEventListener('click',yes);reject.removeEventListener('click',no);accepted?onAccept():onReject();};
-    const yes=()=>finish(true), no=()=>finish(false);
-    accept.addEventListener('click',yes);reject.addEventListener('click',no);
   }
   setSelf(name){$('renameButton').innerHTML='';const t=document.createElement('span');t.textContent=name;const e=document.createElement('span');e.textContent=' ✎';e.setAttribute('aria-hidden','true');$('renameButton').append(t,e);}
   setStatus(status,mode){$('connectionLabel').textContent=status;$('footerStatus').textContent=`${status} · ${mode} mode`;}

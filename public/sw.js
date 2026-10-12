@@ -1,4 +1,4 @@
-const CACHE_VERSION='nearsend-offline-v3';
+const CACHE_VERSION='nearsend-offline-v2';
 const ASSETS=['/','/index.html','/css/style.css','/js/app.js','/js/ui.js','/js/signaling.js','/js/peer.js','/js/transfer.js','/manifest.json','/icons/192.png','/icons/512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_VERSION).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('nearsend-')&&key!==CACHE_VERSION).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});

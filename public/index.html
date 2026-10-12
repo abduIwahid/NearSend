@@ -19,32 +19,34 @@
     </div>
   </header>
   <main class="shell">
-    <section class="intro" id="intro">
+    <section class="intro">
       <div>
         <p class="eyebrow">PRIVATE FILE SHARING</p>
-        <h1>Connect devices.<br><span class="muted-heading">Then share.</span></h1>
-        <p class="lead">Find a nearby device, send a connection request or pair with a QR code, then transfer files directly.</p>
+        <h1>Send files.<br><span class="muted-heading">Not links.</span></h1>
+        <p class="lead">Send files to nearby devices. No account, no uploads, no fuss.</p>
       </div>
       <div class="intro-note"><span class="lock-icon" aria-hidden="true">↔</span><span>Direct device-to-device transfer when possible.</span></div>
-    </section>
-
-    <section class="pairing-actions" id="pairingActions">
-      <button id="showQrPairButton" class="button secondary" type="button">Pair using QR code</button>
-      <button id="showOfflinePairButton" class="button secondary" type="button">Offline pairing</button>
-      <p class="tiny-note">Online requests use the live device list. Offline pairing requires both devices on the same Wi-Fi/hotspot and exchanging connection codes locally.</p>
     </section>
 
     <section id="shareBox" class="share-box" hidden>
       <div class="share-copy">
         <p class="section-label">JOIN FROM ANOTHER DEVICE</p>
-        <p class="share-help">Scan this invitation on another device to open NearSend in the same online pairing room. Offline pairing uses the separate offline flow.</p>
+        <p class="share-help">Open this address on a device connected to the same Wi-Fi or hotspot.</p>
         <div class="url-row"><code id="shareUrl">Loading address…</code><button id="copyButton" class="button secondary" type="button">Copy</button></div>
         <p class="tiny-note">Local mode works without internet. Keep this host running.</p>
       </div>
       <div id="qr" class="qr-box" aria-label="QR code for this address"></div>
     </section>
 
-    <section class="offline-panel" id="offlinePanel" aria-labelledby="offlineTitle" hidden>
+    <section id="fileDropZone" class="file-drop-zone" aria-label="Choose or drop files to send">
+      <div class="drop-symbol" aria-hidden="true">↑</div>
+      <h2>Send files to a nearby device</h2>
+      <p id="selectedFilesLabel">Choose files from your device or drag and drop them here.</p>
+      <button id="chooseFilesButton" class="button primary" type="button">Choose files</button>
+      <p class="drop-hint">You can select multiple files. Then choose a device below.</p>
+    </section>
+
+    <section class="offline-panel" aria-labelledby="offlineTitle">
       <div class="section-head"><div><p class="section-label">NO INTERNET REQUIRED</p><h2 id="offlineTitle">Offline connection</h2></div><span class="connection-label">Same Wi-Fi / hotspot</span></div>
       <p class="offline-intro">Use this when both devices have no internet. Connect them to the same Wi-Fi or hotspot, then exchange the connection text below. The text is exchanged locally by you; NearSend does not send it to a server.</p>
       <div class="offline-actions"><button id="createOfferButton" class="button primary" type="button">Device 1: Create connection code</button><button id="resetOfflineButton" class="button secondary" type="button">Reset</button></div>
@@ -57,25 +59,17 @@
       <p class="tiny-note">Browser-only offline pairing is experimental. Keep this page open on both devices until the transfer finishes. On iPhone, open the app from the Home Screen after visiting it online once.</p>
     </section>
 
-    <section class="devices-section" id="devicesSection">
-      <div class="section-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2></div><span id="connectionLabel" class="connection-label">Connecting…</span></div>
+    <section class="devices-section">
+      <div class="section-head devices-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2><span id="connectionLabel" class="connection-label">Connecting…</span></div><div class="pair-actions"><button id="generateQrButton" class="button secondary" type="button">Generate QR</button><button id="scanQrButton" class="button primary" type="button">Scan QR</button></div></div>
+      <section id="pairQrPanel" class="pair-qr-panel" hidden><div class="pair-qr-content"><div><h3 id="pairQrTitle">Pair with NearSend</h3><p id="pairQrHelp">Let the other device scan this code to open the same NearSend room.</p></div><div id="pairQrImage" class="pair-qr-image"></div></div><button id="closeQrButton" class="button secondary" type="button">Close</button></section>
+      <input id="qrCameraInput" type="file" accept="image/*" capture="environment" hidden>
       <div id="deviceList" class="device-grid" aria-live="polite" aria-label="Nearby devices"></div>
       <div id="emptyState" class="empty-state">
         <div class="empty-icon" aria-hidden="true">⌁</div>
         <h3>No devices found</h3>
-        <p>Open NearSend on another device. For online pairing, use the same invitation room; for offline pairing, use the offline connection flow.</p>
-        <div class="tips"><span>01 &nbsp; Use the same Wi-Fi or hotspot</span><span>02 &nbsp; Offline pairing uses local connection codes</span></div>
+        <p>Open NearSend on another device connected to the same network.</p>
+        <div class="tips"><span>01 &nbsp; Use the same Wi-Fi or hotspot</span><span>02 &nbsp; No internet needed in local mode</span></div>
       </div>
-    </section>
-
-    <section id="fileSharingPage" hidden>
-    <div class="section-head"><div><p class="section-label">CONNECTED DEVICE</p><h2 id="connectedHeading">Ready to share</h2></div><button id="disconnectButton" class="button secondary" type="button">Disconnect</button></div>
-    <section id="fileDropZone" class="file-drop-zone" aria-label="Choose or drop files to send">
-      <div class="drop-symbol" aria-hidden="true">↑</div>
-      <h2>Send files to a nearby device</h2>
-      <p id="selectedFilesLabel">Choose files from your device or drag and drop them here.</p>
-      <button id="chooseFilesButton" class="button primary" type="button">Choose files</button>
-      <p class="drop-hint">You can select multiple files. Files are sent to the connected device.</p>
     </section>
 
     <section id="transfersSection" class="transfers-section" hidden>
@@ -83,18 +77,10 @@
       <div id="transfersList" class="transfer-list"></div>
     </section>
     <p class="keep-open" id="keepOpen" hidden>Keep this tab open until the transfer finishes.</p>
-    </section>
   </main>
   <footer><span id="footerStatus">Starting NearSend…</span><span>Files are not stored by NearSend.</span></footer>
 
   <input id="fileInput" type="file" multiple hidden>
-  <div id="pairRequestBackdrop" class="backdrop" hidden>
-    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="pairRequestTitle">
-      <p class="section-label">DEVICE PAIRING</p><h2 id="pairRequestTitle">Connection request</h2>
-      <p id="pairRequestDescription" class="dialog-description"></p>
-      <div class="dialog-actions"><button id="rejectPairButton" class="button secondary" type="button">Reject</button><button id="acceptPairButton" class="button primary" type="button">Accept request</button></div>
-    </section>
-  </div>
   <div id="dialogBackdrop" class="backdrop" hidden>
     <section id="receiveDialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogDescription">
       <p class="section-label">INCOMING TRANSFER</p><h2 id="dialogTitle">Incoming file</h2>
@@ -104,6 +90,7 @@
       <div class="dialog-actions"><button id="declineButton" class="button secondary" type="button">Decline</button><button id="acceptButton" class="button primary" type="button">Accept file</button></div>
     </section>
   </div>
+  <div id="pairRequestBackdrop" class="backdrop" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="pairRequestTitle"><p class="section-label">DEVICE PAIRING</p><h2 id="pairRequestTitle">Connection request</h2><p id="pairRequestText" class="dialog-description"></p><div class="dialog-actions"><button id="rejectPairButton" class="button secondary" type="button">Reject</button><button id="acceptPairButton" class="button primary" type="button">Accept & connect</button></div></section></div>
   <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
   <script type="module" src="/js/app.js"></script>
 </body>
