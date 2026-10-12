@@ -1,12 +1,13 @@
 import { formatBytes } from './transfer.js';
 const $ = id => document.getElementById(id);
 const escapeText = s => String(s ?? '');
-function iconFor(type){ return type==='phone'?'▯':type==='tablet'?'▤':'▱'; }
+function iconFor(type){ return type==='phone'?'smartphone':type==='tablet'?'tablet':'laptop'; }
+function renderIcons(root=document){ if(window.lucide?.createIcons) window.lucide.createIcons({root}); }
 export class UI {
   constructor() {
     this.deviceList=$('deviceList'); this.empty=$('emptyState'); this.count=$('deviceCount');
     this.transfers=$('transfersList'); this.transferSection=$('transfersSection'); this.dialogBackdrop=$('dialogBackdrop');
-    this.activeDialog=null; this.lastFocus=null;
+    this.activeDialog=null; this.lastFocus=null;renderIcons();
     $('declineButton').addEventListener('click',()=>this.finishDialog(false));
     $('acceptButton').addEventListener('click',()=>this.finishDialog(true));
     $('dialogBackdrop').addEventListener('click',e=>{if(e.target===this.dialogBackdrop)this.finishDialog(false)});
@@ -26,17 +27,17 @@ export class UI {
     for(const p of list){
       const b=document.createElement('button'); b.type='button'; b.className='device-card';
       b.setAttribute('aria-label',`Send file to ${p.name}`);
-      const ico=document.createElement('span');ico.className='device-icon';ico.setAttribute('aria-hidden','true');ico.textContent=iconFor(p.deviceType);
+      const ico=document.createElement('span');ico.className='device-icon';ico.setAttribute('aria-hidden','true');ico.innerHTML=`<i data-lucide="${iconFor(p.deviceType)}"></i>`;
       const name=document.createElement('span');name.className='device-name';name.textContent=p.name;
-      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType;const action=document.createElement('span');action.className='device-connect-label';action.textContent='Request to connect →';
+      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType||p.type||'device';const action=document.createElement('span');action.className='device-connect-label';action.textContent='Request to connect →';
       b.append(ico,name,type,action); b.addEventListener('click',()=>onPick(p));
       b.addEventListener('dragover',e=>{e.preventDefault();b.classList.add('dragover')});
       b.addEventListener('dragleave',()=>b.classList.remove('dragover'));
       b.addEventListener('drop',e=>{e.preventDefault();b.classList.remove('dragover');if(e.dataTransfer.files.length)onPick(p,e.dataTransfer.files)});
-      this.deviceList.append(b);
+      this.deviceList.append(b);renderIcons(b);
     }
   }
-  setSelf(name){$('renameButton').innerHTML='';const t=document.createElement('span');t.textContent=name;const e=document.createElement('span');e.textContent=' ✎';e.setAttribute('aria-hidden','true');$('renameButton').append(t,e);}
+  setSelf(name){$('renameButton').innerHTML='';const t=document.createElement('span');t.textContent=name;const e=document.createElement('span');e.innerHTML='<i data-lucide="pencil" aria-hidden="true"></i>';e.setAttribute('aria-hidden','true');$('renameButton').append(t,e);renderIcons($('renameButton'));}
   setStatus(status,mode){$('connectionLabel').textContent=status;$('footerStatus').textContent=`${status} · ${mode} mode`;}
   showShare(url,qrData) {
     $('shareBox').hidden=false;$('shareUrl').textContent=url;

@@ -11,11 +11,11 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="NearSend home"><span class="brand-mark" aria-hidden="true">N</span><span>NearSend</span></a>
+    <a class="brand" href="/" aria-label="NearSend home"><span class="brand-mark" aria-hidden="true"><i data-lucide="send"></i></span><span>NearSend</span></a>
     <div class="device-self">
       <span class="status-dot" aria-hidden="true"></span>
       <span class="muted">Your device</span>
-      <button id="renameButton" class="name-chip" type="button" title="Rename this device">Connecting… <span aria-hidden="true">✎</span></button>
+      <button id="renameButton" class="name-chip" type="button" title="Rename this device">Connecting… <i data-lucide="pencil" aria-hidden="true"></i></button>
     </div>
   </header>
   <main class="shell">
@@ -25,7 +25,7 @@
         <h1>Send files.<br><span class="muted-heading">Not links.</span></h1>
         <p class="lead">Send files to nearby devices. No account, no uploads, no fuss.</p>
       </div>
-      <div class="intro-note"><span class="lock-icon" aria-hidden="true">↔</span><span>Direct device-to-device transfer when possible.</span></div>
+      <div class="intro-note"><span class="lock-icon" aria-hidden="true"><i data-lucide="shield-check"></i></span><span>Direct device-to-device transfer when possible.</span></div>
     </section>
 
     <section id="shareBox" class="share-box" hidden>
@@ -39,7 +39,7 @@
     </section>
 
     <section id="fileDropZone" class="file-drop-zone" aria-label="Choose or drop files to send">
-      <div class="drop-symbol" aria-hidden="true">↑</div>
+      <div class="drop-symbol" aria-hidden="true"><i data-lucide="upload"></i></div>
       <h2>Send files to a nearby device</h2>
       <p id="selectedFilesLabel">Choose files from your device or drag and drop them here.</p>
       <button id="chooseFilesButton" class="button primary" type="button">Choose files</button>
@@ -65,7 +65,7 @@
       <input id="qrCameraInput" type="file" accept="image/*" capture="environment" hidden>
       <div id="deviceList" class="device-grid" aria-live="polite" aria-label="Nearby devices"></div>
       <div id="emptyState" class="empty-state">
-        <div class="empty-icon" aria-hidden="true">⌁</div>
+        <div class="empty-icon" aria-hidden="true"><i data-lucide="laptop"></i></div>
         <h3>No devices found</h3>
         <p>Open NearSend on another device connected to the same network.</p>
         <div class="tips"><span>01 &nbsp; Use the same Wi-Fi or hotspot</span><span>02 &nbsp; No internet needed in local mode</span></div>
@@ -85,13 +85,14 @@
     <section id="receiveDialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogDescription">
       <p class="section-label">INCOMING TRANSFER</p><h2 id="dialogTitle">Incoming file</h2>
       <p id="dialogDescription" class="dialog-description"></p>
-      <div class="incoming-file"><span class="file-icon" aria-hidden="true">↧</span><div><strong id="incomingName"></strong><span id="incomingMeta" class="muted"></span></div></div>
+      <div class="incoming-file"><span class="file-icon" aria-hidden="true"><i data-lucide="file-down"></i></span><div><strong id="incomingName"></strong><span id="incomingMeta" class="muted"></span></div></div>
       <p id="largeFileWarning" class="warning" hidden>This file may use a lot of memory on this device.</p>
       <div class="dialog-actions"><button id="declineButton" class="button secondary" type="button">Decline</button><button id="acceptButton" class="button primary" type="button">Accept file</button></div>
     </section>
   </div>
   <div id="pairRequestBackdrop" class="backdrop" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="pairRequestTitle"><p class="section-label">DEVICE PAIRING</p><h2 id="pairRequestTitle">Connection request</h2><p id="pairRequestText" class="dialog-description"></p><div class="dialog-actions"><button id="rejectPairButton" class="button secondary" type="button">Reject</button><button id="acceptPairButton" class="button primary" type="button">Accept & connect</button></div></section></div>
   <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

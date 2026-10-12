@@ -3,6 +3,7 @@ import { createPeer } from './peer.js';
 import { TransferManager } from './transfer.js';
 import { UI } from './ui.js';
 
+const $ = id => document.getElementById(id);
 const ui=new UI();
 const peers=new Map(), peerConnections=new Map(), pendingFiles={};
 let self=null, stun=null, mode='local', transferManager, queuedFiles=null;
