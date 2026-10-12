@@ -113,3 +113,65 @@ button, .button { max-width:100%; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
+
+/* Final compact header alignment: brand left, device controls right. */
+.topbar {
+  width: 100%;
+  min-height: 60px;
+  height: auto;
+  padding: 10px max(14px, calc((100vw - 912px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.brand {
+  margin-right: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.device-self {
+  margin-left: auto;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.name-chip {
+  max-width: min(42vw, 230px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brand-mark {
+  width: 30px;
+  height: 30px;
+}
+@media (max-width: 520px) {
+  .topbar {
+    min-height: 54px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .brand {
+    gap: 7px;
+    font-size: 15px;
+  }
+  .brand-mark {
+    width: 27px;
+    height: 27px;
+  }
+  .device-self {
+    gap: 5px;
+  }
+  .name-chip {
+    max-width: 44vw;
+    min-height: 32px;
+    padding: 5px 7px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 360px) {
+  .brand { font-size: 14px; gap: 5px; }
+  .brand-mark { width: 24px; height: 24px; }
+  .name-chip { max-width: 40vw; }
+}

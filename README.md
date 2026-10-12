@@ -64,3 +64,13 @@ Commit the source code, documentation, `package.json`, deployment configuration,
 - Test camera permission denied, QR scanning, QR-image fallback, pairing acceptance/decline, and small and large file transfers.
 - Test both devices on the deployed HTTPS URL and on different networks.
 - Remember that direct WebRTC connectivity can fail across some network/NAT configurations; this is not guaranteed to work merely because two devices are nearby. Verify actual transfer behavior on the target deployment.
+
+
+## Latest mobile fixes
+
+- The header now keeps the NearSend logo/name aligned to the left and the device name/control aligned to the right, with compact spacing on narrow screens.
+- Runtime error notices now display a useful error message and avoid repeating the same message over and over.
+- Device-list messages are validated before rendering so an unexpected signaling payload does not crash the UI.
+- Cache-busting references were updated for the latest CSS and JavaScript.
+
+**Deployment note:** A successful Vercel deployment confirms that the build/deployment completed; it does not guarantee reliable multi-device discovery. The current WebSocket signaling implementation keeps its room registry in memory, which can be unreliable across separate serverless function instances. If devices still cannot discover each other after these frontend fixes, the signaling service needs a shared presence store or a persistent WebSocket host.

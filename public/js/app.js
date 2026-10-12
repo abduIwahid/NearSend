@@ -284,5 +284,23 @@ async function setupInfo(){
 setupInfo();
 
 
-window.addEventListener('error', (event) => { console.error('NearSend error:', event.error || event.message); const region=document.getElementById('toastRegion'); if(region){const el=document.createElement('div');el.className='toast error';el.textContent='NearSend encountered a script error. Reload the page; if it continues, check the deployment files.';region.append(el);} });
-window.addEventListener('unhandledrejection', (event) => { console.error('NearSend async error:', event.reason); });
+let lastRuntimeError = '';
+function reportRuntimeError(message) {
+  const region = document.getElementById('toastRegion');
+  const detail = String(message || 'Unknown JavaScript error').slice(0, 180);
+  if (detail === lastRuntimeError) return;
+  lastRuntimeError = detail;
+  console.error('NearSend runtime error:', message);
+  if (!region) return;
+  const el = document.createElement('div');
+  el.className = 'toast error';
+  el.textContent = `NearSend error: ${detail}. Reload the page; if it continues, send this message with a screenshot.`;
+  region.append(el);
+}
+window.addEventListener('error', event => {
+  reportRuntimeError(event.message || event.error?.message || 'A script failed to load');
+});
+window.addEventListener('unhandledrejection', event => {
+  const reason = event.reason;
+  reportRuntimeError(reason?.message || reason || 'An asynchronous operation failed');
+});
