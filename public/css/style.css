@@ -36,3 +36,5 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 footer{align-items:center;flex-wrap:wrap}.footer-links{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.footer-links a{display:inline-flex;align-items:center;gap:6px;color:var(--g700);text-decoration:none;font-size:11px}.footer-links a:hover{text-decoration:underline;color:var(--text)}.footer-links svg{width:15px;height:15px}.footer-note{font-size:11px}
 @media(max-width:767px){.skeleton-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.skeleton-card{min-height:112px;padding:12px}.footer-links{gap:14px}}
 @media(prefers-reduced-motion:reduce){.skeleton-pulse,.skeleton-icon,.skeleton-line{animation:none}}
+
+.brand-mark{overflow:hidden;background:transparent;border-radius:8px;flex:none}.brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
