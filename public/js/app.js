@@ -3,7 +3,6 @@ import { createPeer } from './peer.js';
 import { TransferManager } from './transfer.js';
 import { UI } from './ui.js';
 
-const $ = id => document.getElementById(id);
 const ui=new UI();
 const peers=new Map(), peerConnections=new Map(), pendingFiles={};
 let self=null, stun=null, mode='local', transferManager, queuedFiles=null;
@@ -37,89 +36,6 @@ const sig=connect({
 });
 transferManager=new TransferManager({ui,sendSignal:signalSend});
 
-// Offline pairing uses WebRTC with no STUN/TURN server. Devices exchange SDP
-// manually (copy/paste) while on the same Wi-Fi or hotspot.
-const offlinePeerId='offline-peer';
-let offlinePc=null, offlineChannel=null, offlineRole=null;
-const localCode=$('localCode'), remoteCode=$('remoteCode'), offlineStatus=$('offlineStatus');
-function setOfflineStatus(message,connected=false){offlineStatus.textContent=message;$('sendOfflineFilesButton').disabled=!connected;}
-function waitForIce(pc,timeoutMs=15000){
-  if(pc.iceGatheringState==='complete')return Promise.resolve();
-  return new Promise(resolve=>{
-    let finished=false;
-    const done=()=>{if(finished)return;finished=true;clearTimeout(timer);pc.removeEventListener('icegatheringstatechange',check);resolve();};
-    const check=()=>{if(pc.iceGatheringState==='complete')done();};
-    const timer=setTimeout(done,timeoutMs);
-    pc.addEventListener('icegatheringstatechange',check);
-  });
-}
-function closeOfflinePeer(){
-  try{offlineChannel?.close();}catch{}
-  try{offlinePc?.close();}catch{}
-  offlinePc=null;offlineChannel=null;offlineRole=null;
-  setOfflineStatus('Not connected');
-}
-function setupOfflineChannel(channel){
-  offlineChannel=channel;channel.binaryType='arraybuffer';
-  channel.onopen=()=>{transferManager.register(offlinePeerId,channel);setOfflineStatus('Connected — offline transfer ready',true);ui.toast('Offline device connected');};
-  channel.onclose=()=>{setOfflineStatus('Connection closed');};
-  channel.onerror=()=>{setOfflineStatus('Connection error');};
-  channel.onmessage=event=>transferManager.onMessage(offlinePeerId,event.data);
-}
-function newOfflinePeer(){
-  closeOfflinePeer();
-  offlinePc=new RTCPeerConnection({iceServers:[]});
-  offlinePc.ondatachannel=event=>setupOfflineChannel(event.channel);
-  offlinePc.onconnectionstatechange=()=>{
-    if(offlinePc?.connectionState==='connected'&&offlineChannel?.readyState==='open')setOfflineStatus('Connected — offline transfer ready',true);
-    else if(['failed','disconnected','closed'].includes(offlinePc?.connectionState)&&offlineChannel?.readyState!=='open')setOfflineStatus(`Connection ${offlinePc.connectionState}`);
-  };
-  return offlinePc;
-}
-function parseCode(text){
-  let value;try{value=JSON.parse(text.trim());}catch{throw new Error('That code is not valid JSON. Copy the entire code, including both braces.');}
-  if(!value||!['offer','answer'].includes(value.type)||!value.sdp)throw new Error('This does not look like a NearSend connection code.');
-  return value;
-}
-$('createOfferButton').addEventListener('click',async()=>{
-  try{
-    const pc=newOfflinePeer();offlineRole='offerer';setupOfflineChannel(pc.createDataChannel('nearsend-files',{ordered:true}));
-    setOfflineStatus('Creating code…');
-    await pc.setLocalDescription(await pc.createOffer());await waitForIce(pc);
-    localCode.value=JSON.stringify(pc.localDescription);setOfflineStatus('Code ready. Share it with Device 2.');
-    ui.toast('Connection code created. Copy it to Device 2.');
-  }catch(error){setOfflineStatus('Could not create code');ui.toast(error.message||'Could not create offline code',true);}
-});
-$('processOfferButton').addEventListener('click',async()=>{
-  try{
-    const offer=parseCode(remoteCode.value);if(offer.type!=='offer')throw new Error('Paste Device 1’s offer code into “Other device’s connection code”.');
-    const pc=newOfflinePeer();offlineRole='answerer';setOfflineStatus('Creating reply code…');
-    await pc.setRemoteDescription(offer);await pc.setLocalDescription(await pc.createAnswer());await waitForIce(pc);
-    localCode.value=JSON.stringify(pc.localDescription);setOfflineStatus('Reply ready. Send it back to Device 1.');
-    ui.toast('Reply code created. Copy it back to Device 1.');
-  }catch(error){setOfflineStatus('Could not process code');ui.toast(error.message||'Could not process offline code',true);}
-});
-$('applyAnswerButton').addEventListener('click',async()=>{
-  try{
-    const answer=parseCode(remoteCode.value);if(answer.type!=='answer')throw new Error('Paste Device 2’s reply code into “Other device’s connection code”.');
-    if(!offlinePc||offlineRole!=='offerer')throw new Error('First create a connection code on Device 1.');
-    await offlinePc.setRemoteDescription(answer);setOfflineStatus('Connecting to Device 2…');
-    ui.toast('Reply accepted. Waiting for the local connection…');
-  }catch(error){ui.toast(error.message||'Could not connect offline',true);}
-});
-$('copyLocalCodeButton').addEventListener('click',async()=>{
-  if(!localCode.value.trim()){ui.toast('Create a connection code first.',true);return;}
-  try{await navigator.clipboard.writeText(localCode.value);ui.toast('Connection code copied. Share it with the other device.');}
-  catch{localCode.focus();localCode.select();ui.toast('Code selected. Copy it and share it with the other device.');}
-});
-$('resetOfflineButton').addEventListener('click',()=>{closeOfflinePeer();localCode.value='';remoteCode.value='';setOfflineStatus('Not connected');});
-$('sendOfflineFilesButton').addEventListener('click',()=>{
-  if(!transferManager.channels.has(offlinePeerId)){ui.toast('Connect the other device first.',true);return;}
-  const input=$('fileInput');input.value='';input.onchange=async()=>{
-    const files=Array.from(input.files||[]);if(!files.length)return;
-    try{await transferManager.sendFiles(offlinePeerId,files,'offline device');}catch(error){ui.toast(error.message||'Offline send failed',true);}
-  };input.click();
-});
 function makePeer(id,initiator){
   const entry={peer:null,channel:null,relayTimer:null};
   const peer=createPeer({remoteId:id,stun,initiator,signalSend,onChannel:ch=>{
@@ -225,7 +141,21 @@ ui.onReceiveDecision=(accept,meta)=>{
 };
 $('acceptPairButton').addEventListener('click',()=>{if(!incomingPairRequest)return;const req=incomingPairRequest;incomingPairRequest=null;$('pairRequestBackdrop').hidden=true;sig.send({type:'pair-response',to:req.from,accepted:true});pairedDevices.add(req.from);const p=peers.get(req.from);if(p)beginPairConnection(p,false);});
 $('rejectPairButton').addEventListener('click',()=>{if(incomingPairRequest)sig.send({type:'pair-response',to:incomingPairRequest.from,accepted:false});incomingPairRequest=null;$('pairRequestBackdrop').hidden=true;});
-$('generateQrButton').addEventListener('click',async()=>{const panel=$('pairQrPanel'),box=$('pairQrImage');box.replaceChildren();const invite=new URL(location.href);$('pairQrTitle').textContent='Scan to join NearSend';$('pairQrHelp').textContent='The other device can scan this code to open NearSend in the same room. Then tap its device card to request pairing.';try{const res=await fetch('/api/qr?text='+encodeURIComponent(invite.href));if(!res.ok)throw new Error();const data=await res.text();const img=document.createElement('img');img.alt='NearSend room QR code';img.src=data;box.append(img);}catch{box.textContent='QR generation is unavailable. Copy and open this room link: '+invite.href;}panel.hidden=false;});
+$('generateQrButton').addEventListener('click',async()=>{
+  const panel=$('pairQrPanel'),box=$('pairQrImage'); box.replaceChildren();
+  const invite=new URL(location.href);
+  $('pairQrTitle').textContent='Scan to open NearSend';
+  $('pairQrHelp').textContent='Scan this code on the other device, then select the device to request a connection.';
+  panel.hidden=false;
+  try {
+    const res=await fetch('/api/qr?text='+encodeURIComponent(invite.href),{cache:'no-store'});
+    if(res.ok){const data=(await res.text()).trim();if(data.startsWith('data:image/')){const img=document.createElement('img');img.alt='QR code to open NearSend';img.src=data;box.append(img);return;}}
+  } catch {}
+  try {
+    if(!window.QRCode) await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=resolve;s.onerror=reject;document.head.append(s);});
+    new window.QRCode(box,{text:invite.href,width:220,height:220,colorDark:'#111111',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
+  } catch {box.textContent='Could not generate a QR code. Please check your connection and try again.';}
+});
 $('closeQrButton').addEventListener('click',()=>$('pairQrPanel').hidden=true);
 $('scanQrButton').addEventListener('click',()=>{if(!('BarcodeDetector'in window)){ui.toast('This browser cannot scan QR codes directly. Use your camera app to scan the code, then return to NearSend.',true);return;}const input=$('qrCameraInput');input.value='';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const bitmap=await createImageBitmap(file);const detector=new BarcodeDetector({formats:['qr_code']});const codes=await detector.detect(bitmap);if(!codes.length)throw new Error('No QR code found in that image.');const target=new URL(codes[0].rawValue);if(target.origin!==location.origin)throw new Error('This QR code is not for this NearSend website.');location.href=target.href;}catch(e){ui.toast(e.message||'Could not read QR code.',true);}};input.click();});
 $('renameButton').addEventListener('click',()=>{

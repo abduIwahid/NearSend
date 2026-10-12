@@ -15,7 +15,7 @@
     <div class="device-self">
       <span class="status-dot" aria-hidden="true"></span>
       <span class="muted">Your device</span>
-      <button id="renameButton" class="name-chip" type="button" title="Rename this device">Connecting… <i data-lucide="pencil" aria-hidden="true"></i></button>
+      <button id="renameButton" class="name-chip" type="button" title="Rename this device">Connecting… <span aria-hidden="true">✎</span></button>
     </div>
   </header>
   <main class="shell">
@@ -33,7 +33,7 @@
         <p class="section-label">JOIN FROM ANOTHER DEVICE</p>
         <p class="share-help">Open this address on a device connected to the same Wi-Fi or hotspot.</p>
         <div class="url-row"><code id="shareUrl">Loading address…</code><button id="copyButton" class="button secondary" type="button">Copy</button></div>
-        <p class="tiny-note">Local mode works without internet. Keep this host running.</p>
+        <p class="tiny-note">Keep this page open while sharing.</p>
       </div>
       <div id="qr" class="qr-box" aria-label="QR code for this address"></div>
     </section>
@@ -45,22 +45,8 @@
       <button id="chooseFilesButton" class="button primary" type="button">Choose files</button>
       <p class="drop-hint">You can select multiple files. Then choose a device below.</p>
     </section>
-
-    <section class="offline-panel" aria-labelledby="offlineTitle">
-      <div class="section-head"><div><p class="section-label">NO INTERNET REQUIRED</p><h2 id="offlineTitle">Offline connection</h2></div><span class="connection-label">Same Wi-Fi / hotspot</span></div>
-      <p class="offline-intro">Use this when both devices have no internet. Connect them to the same Wi-Fi or hotspot, then exchange the connection text below. The text is exchanged locally by you; NearSend does not send it to a server.</p>
-      <div class="offline-actions"><button id="createOfferButton" class="button primary" type="button">Device 1: Create connection code</button><button id="resetOfflineButton" class="button secondary" type="button">Reset</button></div>
-      <label class="offline-label" for="localCode">Your connection code</label>
-      <textarea id="localCode" class="offline-code" rows="4" spellcheck="false" placeholder="Device 1: create a code here. Device 2: paste Device 1's code here."></textarea>
-      <div class="offline-actions"><button id="processOfferButton" class="button secondary" type="button">Device 2: Create reply code</button><button id="applyAnswerButton" class="button primary" type="button">Device 1: Connect using reply</button><button id="copyLocalCodeButton" class="button secondary" type="button">Copy code</button></div>
-      <label class="offline-label" for="remoteCode">Other device's connection code</label>
-      <textarea id="remoteCode" class="offline-code" rows="4" spellcheck="false" placeholder="Paste the other device's code here."></textarea>
-      <div class="offline-actions"><button id="sendOfflineFilesButton" class="button primary" type="button" disabled>Choose files to send offline</button><span id="offlineStatus" class="connection-label" aria-live="polite">Not connected</span></div>
-      <p class="tiny-note">Browser-only offline pairing is experimental. Keep this page open on both devices until the transfer finishes. On iPhone, open the app from the Home Screen after visiting it online once.</p>
-    </section>
-
     <section class="devices-section">
-      <div class="section-head devices-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2><span id="connectionLabel" class="connection-label">Connecting…</span></div><div class="pair-actions"><button id="generateQrButton" class="button secondary" type="button">Generate QR</button><button id="scanQrButton" class="button primary" type="button">Scan QR</button></div></div>
+      <div class="section-head devices-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2><span id="connectionLabel" class="connection-label">Connecting…</span></div><div class="pair-actions"><button id="generateQrButton" class="button secondary" type="button">Generate QR Code</button><button id="scanQrButton" class="button primary" type="button">Scan QR Code</button></div></div>
       <section id="pairQrPanel" class="pair-qr-panel" hidden><div class="pair-qr-content"><div><h3 id="pairQrTitle">Pair with NearSend</h3><p id="pairQrHelp">Let the other device scan this code to open the same NearSend room.</p></div><div id="pairQrImage" class="pair-qr-image"></div></div><button id="closeQrButton" class="button secondary" type="button">Close</button></section>
       <input id="qrCameraInput" type="file" accept="image/*" capture="environment" hidden>
       <div id="deviceList" class="device-grid" aria-live="polite" aria-label="Nearby devices"></div>
@@ -68,7 +54,7 @@
         <div class="empty-icon" aria-hidden="true"><i data-lucide="laptop"></i></div>
         <h3>No devices found</h3>
         <p>Open NearSend on another device connected to the same network.</p>
-        <div class="tips"><span>01 &nbsp; Use the same Wi-Fi or hotspot</span><span>02 &nbsp; No internet needed in local mode</span></div>
+        <div class="tips"><span>01 &nbsp; Use the same Wi-Fi or hotspot</span><span>02 &nbsp; Open NearSend on another device</span></div>
       </div>
     </section>
 

@@ -27,9 +27,9 @@ export class UI {
     for(const p of list){
       const b=document.createElement('button'); b.type='button'; b.className='device-card';
       b.setAttribute('aria-label',`Send file to ${p.name}`);
-      const ico=document.createElement('span');ico.className='device-icon';ico.setAttribute('aria-hidden','true');ico.innerHTML=`<i data-lucide="${iconFor(p.deviceType)}"></i>`;
+      const ico=document.createElement('span');ico.className='device-icon';ico.setAttribute('aria-hidden','true');ico.innerHTML='<i data-lucide="'+iconFor(p.deviceType)+'"></i>';
       const name=document.createElement('span');name.className='device-name';name.textContent=p.name;
-      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType||p.type||'device';const action=document.createElement('span');action.className='device-connect-label';action.textContent='Request to connect →';
+      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType;const action=document.createElement('span');action.className='device-connect-label';action.textContent='Request to connect →';
       b.append(ico,name,type,action); b.addEventListener('click',()=>onPick(p));
       b.addEventListener('dragover',e=>{e.preventDefault();b.classList.add('dragover')});
       b.addEventListener('dragleave',()=>b.classList.remove('dragover'));
