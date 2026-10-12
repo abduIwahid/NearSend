@@ -1,4 +1,4 @@
-export function connect({ onHello, onPeers, onSignal, onRelay, onBinary, onStatus }) {
+export function connect({ onHello, onPeers, onSignal, onRelay, onBinary, onStatus, onPairRequest, onPairResponse }) {
   let ws, retry = 1000, stopped = false, currentId = null;
   const room = new URLSearchParams(location.search).get('room');
   function open() {
@@ -15,6 +15,8 @@ export function connect({ onHello, onPeers, onSignal, onRelay, onBinary, onStatu
       else if (m.type === 'peers') onPeers?.(m);
       else if (m.type === 'signal') onSignal?.(m);
       else if (m.type === 'relay') onRelay?.(m);
+      else if (m.type === 'pair-request') onPairRequest?.(m);
+      else if (m.type === 'pair-response') onPairResponse?.(m);
       else if (m.type === 'error') onStatus?.(m.message || 'Connection error');
     };
     ws.onclose = () => {

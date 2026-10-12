@@ -44,7 +44,7 @@ exports.attach = (wss, { mode }) => {
       peer.lastMessage = Date.now();
       let msg; try { msg = JSON.parse(data.toString()); } catch { return; }
       const peers = rooms.get(room);
-      if (msg.type === 'signal' || msg.type === 'relay') {
+      if (msg.type === 'signal' || msg.type === 'relay' || msg.type === 'pair-request' || msg.type === 'pair-response') {
         if (typeof msg.to !== 'string' || !peers?.has(msg.to)) return;
         const target = peers.get(msg.to);
         const clean = { ...msg, to: undefined, from: peer.id };

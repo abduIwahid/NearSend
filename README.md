@@ -24,3 +24,14 @@ See [`VERCEL-DEPLOY.md`](VERCEL-DEPLOY.md). This is an experimental adaptation f
 NearSend now caches its app shell as a PWA after you visit it online. When both devices are offline, open the already-cached app on both devices, connect them to the same Wi-Fi or a phone hotspot (mobile data can be off), then use the **Offline connection** panel. Device 1 creates an offer code and shares it with Device 2; Device 2 pastes it into the other-device field and creates a reply code; Device 1 pastes the reply and connects. Exchange the text by a method available to you (for example, temporarily reconnecting to a local network or using a computer to transfer the text); no server is involved in the offline pairing itself. After connected, use **Choose files to send offline**.
 
 **Limitations:** this is an experimental browser-only flow and has not been end-to-end tested across all browsers/devices. Both devices must be on a network that allows peer-to-peer local traffic. Some mobile browsers/networks may not expose usable local ICE candidates, and the current pairing uses no STUN/TURN servers. The connection text is large and manual copy/paste is used instead of QR. The receiver must keep the app open and accept the incoming file. Very large files may use substantial device memory because received chunks are assembled in memory. The app must be opened online once before going offline so its assets are cached.
+
+
+## Pairing workflow update
+
+- The home screen starts with device discovery.
+- Online users can send a connection request; the receiver must accept before WebRTC negotiation begins.
+- “Pair using QR code” creates an invitation URL for a shared online room. The other device scans it, joins the room, then accepts/sends a connection request.
+- The file-transfer screen is shown after the data channel opens.
+- Offline pairing remains a separate experimental flow using manually exchanged WebRTC connection codes on the same Wi-Fi/hotspot. Offline QR-based SDP pairing is not implemented yet.
+
+Vercel WebSocket behavior and all cross-device transfers must be tested after deployment; the in-memory presence registry is not guaranteed to work across separate serverless instances.

@@ -3,9 +3,11 @@ import { createPeer } from './peer.js';
 import { TransferManager } from './transfer.js';
 import { UI } from './ui.js';
 
+const $=id=>document.getElementById(id);
+
 const ui=new UI();
 const peers=new Map(), peerConnections=new Map(), pendingFiles={};
-let self=null, stun=null, mode='local', transferManager, queuedFiles=null;
+let self=null, stun=null, mode='local', transferManager, queuedFiles=null, connectedPeerId=null, pendingPairRequest=null;
 const nameKey='nearsend-device-name';
 function signalSend(m){sig.send({type:'signal',...m});}
 const sig=connect({
@@ -15,7 +17,7 @@ const sig=connect({
     if(saved&&saved!==m.name)sig.send({type:'rename',name:saved});
     ui.setStatus('Connected',mode);
   },
-  onPeers:m=>{peers.clear();m.list.forEach(p=>peers.set(p.id,p));ui.renderDevices(m.list,pickFiles);},
+  onPeers:m=>{peers.clear();m.list.forEach(p=>peers.set(p.id,p));ui.renderDevices(m.list,requestConnection);},
   onSignal:async m=>{
     let entry=peerConnections.get(m.from);
     if(!entry){
@@ -23,6 +25,8 @@ const sig=connect({
     }
     await entry.peer.handle(m);
   },
+  onPairRequest:m=>{pendingPairRequest=m;ui.askPairRequest(m,()=>{sig.send({type:'pair-response',to:m.from,accepted:true});connectedPeerId=m.from;const entry=makePeer(m.from,false);peerConnections.set(m.from,entry);ui.toast(`Accepted ${m.name||'device'}’s request. Connecting…`);},()=>{sig.send({type:'pair-response',to:m.from,accepted:false});ui.toast('Connection request rejected.');});},
+  onPairResponse:m=>{if(!m.accepted){ui.toast(`${peers.get(m.from)?.name||'Device'} declined the request.`,true);return;}connectedPeerId=m.from;const entry=makePeer(m.from,true);peerConnections.set(m.from,entry);ui.toast('Request accepted. Establishing secure connection…');},
   onRelay:m=>handleRelayControl(m),
   onBinary:data=>handleRelayBinary(data),
   onStatus:s=>{ui.setStatus(s,mode);if(s==='reconnecting')ui.toast('Connection lost. Reconnecting…',true);}
@@ -53,7 +57,7 @@ function closeOfflinePeer(){
 }
 function setupOfflineChannel(channel){
   offlineChannel=channel;channel.binaryType='arraybuffer';
-  channel.onopen=()=>{transferManager.register(offlinePeerId,channel);setOfflineStatus('Connected — offline transfer ready',true);ui.toast('Offline device connected');};
+  channel.onopen=()=>{transferManager.register(offlinePeerId,channel);connectedPeerId=offlinePeerId;setOfflineStatus('Connected — offline transfer ready',true);showFileSharing('Offline device');ui.toast('Offline device connected');};
   channel.onclose=()=>{setOfflineStatus('Connection closed');};
   channel.onerror=()=>{setOfflineStatus('Connection error');};
   channel.onmessage=event=>transferManager.onMessage(offlinePeerId,event.data);
@@ -112,11 +116,36 @@ $('sendOfflineFilesButton').addEventListener('click',()=>{
     try{await transferManager.sendFiles(offlinePeerId,files,'offline device');}catch(error){ui.toast(error.message||'Offline send failed',true);}
   };input.click();
 });
+function showFileSharing(name){
+  $('intro').hidden=true;$('pairingActions').hidden=true;$('devicesSection').hidden=true;$('offlinePanel').hidden=true;$('shareBox').hidden=true;
+  $('fileSharingPage').hidden=false;$('connectedHeading').textContent=`Connected to ${name}`;$('keepOpen').hidden=false;
+}
+function showDiscovery(){
+  $('intro').hidden=false;$('pairingActions').hidden=false;$('devicesSection').hidden=false;$('fileSharingPage').hidden=true;$('offlinePanel').hidden=true;$('shareBox').hidden=true;
+  $('keepOpen').hidden=true;connectedPeerId=null;
+}
+function requestConnection(p){
+  if(!p||!sig.id)return;
+  sig.send({type:'pair-request',to:p.id,name:self?.name||'Nearby device'});
+  ui.toast(`Connection request sent to ${p.name}.`);
+}
+$('disconnectButton').addEventListener('click',()=>{
+  if(connectedPeerId===offlinePeerId){closeOfflinePeer();transferManager.channels.delete(offlinePeerId);}
+  else if(connectedPeerId){const entry=peerConnections.get(connectedPeerId);entry?.peer?.close();peerConnections.delete(connectedPeerId);transferManager.channels.delete(connectedPeerId);}
+  showDiscovery();ui.toast('Disconnected.');
+});
+$('showOfflinePairButton').addEventListener('click',()=>{$('offlinePanel').hidden=false;$('offlinePanel').scrollIntoView({behavior:'smooth',block:'start'});});
+$('showQrPairButton').addEventListener('click',()=>{
+  const room=crypto.randomUUID?crypto.randomUUID().replace(/-/g,'').slice(0,10):Math.random().toString(36).slice(2,12);
+  const invite=new URL(location.href);invite.search='';invite.searchParams.set('room',room);
+  // Reload into the same room that the other device will join by scanning the QR.
+  location.href=invite.href;
+});
 function makePeer(id,initiator){
   const entry={peer:null,channel:null,relayTimer:null};
   const peer=createPeer({remoteId:id,stun,initiator,signalSend,onChannel:ch=>{
     entry.channel=ch;ch.binaryType='arraybuffer';
-    ch.onopen=()=>{clearTimeout(entry.relayTimer);transferManager.register(id,ch);ui.toast(`Connected to ${peers.get(id)?.name||'device'}`);};
+    ch.onopen=()=>{clearTimeout(entry.relayTimer);transferManager.register(id,ch);connectedPeerId=id;showFileSharing(peers.get(id)?.name||'Nearby device');ui.toast(`Connected to ${peers.get(id)?.name||'device'}`);};
     ch.onclose=()=>{if(entry.channel===ch)entry.channel=null;};
     ch.onerror=()=>{};
   }});
@@ -142,7 +171,7 @@ function updateSelectedFiles(files){
   const label=$('selectedFilesLabel');
   if(!files?.length){label.textContent='Choose files from your device or drag and drop them here.';return;}
   const total=files.reduce((sum,f)=>sum+f.size,0);
-  label.textContent=`${files.length} file${files.length===1?'':'s'} selected · ${formatSize(total)}. Tap a device below to send.`;
+  label.textContent=`${files.length} file${files.length===1?'':'s'} selected · ${formatSize(total)}. Ready to send to the connected device.`;
 }
 function formatSize(bytes){
   if(bytes<1024)return `${bytes} B`;
@@ -151,9 +180,9 @@ function formatSize(bytes){
   return `${size.toFixed(size>=10?1:2)} ${units[i]}`;
 }
 const dropZone=$('fileDropZone');
-$('chooseFilesButton').addEventListener('click',()=>{$('fileInput').value='';$('fileInput').onchange=()=>{const files=Array.from($('fileInput').files||[]);if(!files.length)return;queuedFiles=files;updateSelectedFiles(files);if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(!peers.size){ui.toast('No nearby devices yet. Keep these files selected, then try again when a device appears.',true);queuedFiles=files;updateSelectedFiles(files);}else{ui.toast('Files selected. Tap the device you want to send them to.');}};$('fileInput').click();});
+$('chooseFilesButton').addEventListener('click',()=>{$('fileInput').value='';$('fileInput').onchange=()=>{const files=Array.from($('fileInput').files||[]);if(!files.length)return;queuedFiles=files;updateSelectedFiles(files);if(connectedPeerId===offlinePeerId&&transferManager.channels.has(offlinePeerId)){const chosen=queuedFiles;queuedFiles=null;updateSelectedFiles(null);transferManager.sendFiles(offlinePeerId,chosen,'offline device').catch(e=>ui.toast(e.message,true));}else if(connectedPeerId&&transferManager.channels.has(connectedPeerId)){const chosen=queuedFiles;queuedFiles=null;updateSelectedFiles(null);transferManager.sendFiles(connectedPeerId,chosen,peers.get(connectedPeerId)?.name||'connected device').catch(e=>ui.toast(e.message,true));}else if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(!peers.size){ui.toast('No nearby devices yet. Keep these files selected, then try again when a device appears.',true);queuedFiles=files;updateSelectedFiles(files);}else{ui.toast('Files selected. Tap the device you want to send them to.');}};$('fileInput').click();});
 for(const eventName of ['dragenter','dragover'])dropZone.addEventListener(eventName,e=>{e.preventDefault();dropZone.classList.add('dragover');});
-for(const eventName of ['dragleave','drop'])dropZone.addEventListener(eventName,e=>{e.preventDefault();if(eventName==='dragleave'&&dropZone.contains(e.relatedTarget))return;dropZone.classList.remove('dragover');if(eventName==='drop'&&e.dataTransfer?.files?.length){const files=Array.from(e.dataTransfer.files);queuedFiles=files;updateSelectedFiles(files);if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(peers.size>1){ui.toast('Files selected. Tap the device you want to send them to.');}else ui.toast('No nearby devices found yet. Keep this page open and try again.',true);}});
+for(const eventName of ['dragleave','drop'])dropZone.addEventListener(eventName,e=>{e.preventDefault();if(eventName==='dragleave'&&dropZone.contains(e.relatedTarget))return;dropZone.classList.remove('dragover');if(eventName==='drop'&&e.dataTransfer?.files?.length){const files=Array.from(e.dataTransfer.files);queuedFiles=files;updateSelectedFiles(files);if(connectedPeerId===offlinePeerId&&transferManager.channels.has(offlinePeerId)){queuedFiles=null;updateSelectedFiles(null);transferManager.sendFiles(offlinePeerId,files,'offline device').catch(e=>ui.toast(e.message,true));}else if(connectedPeerId&&transferManager.channels.has(connectedPeerId)){queuedFiles=null;updateSelectedFiles(null);transferManager.sendFiles(connectedPeerId,files,peers.get(connectedPeerId)?.name||'connected device').catch(e=>ui.toast(e.message,true));}else if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(peers.size>1){ui.toast('Files selected. Tap the device you want to send them to.');}else ui.toast('No nearby devices found yet. Keep this page open and try again.',true);}});
 async function beginSend(p,files){
   let entry=peerConnections.get(p.id);
   if(!entry||entry.peer.pc.connectionState==='closed'){
@@ -231,14 +260,18 @@ $('transfersList').addEventListener('click',e=>{const b=e.target.closest('[data-
 async function setupInfo(){
   try{
     const res=await fetch('/api/info');const info=await res.json();mode=info.mode||'local';ui.setStatus('Connected',mode);
-    if(mode==='local'){
+    if(new URLSearchParams(location.search).has('room')){
+      const url=location.href;let qrData=null;
+      try{const q=await fetch('/api/qr?text='+encodeURIComponent(url));if(q.ok)qrData=await q.text();}catch{}
+      ui.showShare(url,qrData);$('shareBox').hidden=false;
+      $('shareBox').scrollIntoView({behavior:'smooth',block:'center'});
+    } else if(mode==='local'){
       const host=info.urls?.[0];
       if(host){
         const url=host+location.pathname+location.search;
-        // QR generation uses a lightweight server-side endpoint when available.
         let qrData=null;try{const q=await fetch('/api/qr?text='+encodeURIComponent(url));if(q.ok)qrData=await q.text();}catch{}
-        ui.showShare(url,qrData);
-      }else ui.showShare(location.href,null);
+        ui.showShare(url,qrData);$('shareBox').hidden=true;
+      }
     }
   }catch{mode='local';}
 }
