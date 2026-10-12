@@ -38,3 +38,78 @@ footer{align-items:center;flex-wrap:wrap}.footer-links{display:flex;align-items:
 @media(prefers-reduced-motion:reduce){.skeleton-pulse,.skeleton-icon,.skeleton-line{animation:none}}
 
 .brand-mark{overflow:hidden;background:transparent;border-radius:8px;flex:none}.brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
+
+
+/* Cross-device responsive layout hardening */
+html { width:100%; overflow-x:clip; -webkit-text-size-adjust:100%; }
+body { min-width:320px; overflow-wrap:anywhere; }
+img, video, canvas, svg { max-width:100%; }
+.shell { width:100%; }
+.brand { min-width:0; flex-shrink:0; white-space:nowrap; }
+.brand > span:last-child { line-height:1.1; }
+.brand-mark { width:32px; height:32px; padding:0; }
+.brand-mark img { width:100%; height:100%; object-fit:contain; }
+.intro h1 { overflow-wrap:normal; word-break:normal; }
+.share-box > *, .share-copy, .url-row, .devices-head > *, .transfer-row > *, .transfer-main { min-width:0; }
+#shareUrl { overflow-wrap:anywhere; word-break:break-word; }
+.device-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.device-name, .device-type, .device-connect-label { max-width:100%; overflow-wrap:anywhere; }
+.pair-qr-image { min-width:0; max-width:100%; }
+.pair-qr-image img, .pair-qr-image canvas { max-width:100%; height:auto; }
+button, .button { max-width:100%; }
+#qrCameraInput { position:fixed; left:-10000px; width:1px; height:1px; opacity:0; }
+@media (max-width: 760px) {
+  .topbar { height:auto; min-height:64px; padding:12px 18px; gap:12px; }
+  .shell { padding-left:18px; padding-right:18px; }
+  .intro { padding:36px 0 28px; gap:18px; align-items:flex-start; flex-direction:column; }
+  .intro h1 { font-size:clamp(34px,8.5vw,48px); letter-spacing:-1.8px; line-height:1.05; }
+  .lead { font-size:15px; }
+  .intro-note { max-width:none; }
+  .share-box { padding:16px; gap:14px; margin-bottom:28px; }
+  .qr-box { width:92px; height:92px; }
+  .qr-box canvas, .qr-box img { width:88px; height:88px; }
+  .device-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .device-card { min-height:120px; padding:13px; }
+  .section-head h2 { font-size:21px; }
+  .file-drop-zone { padding:24px 14px; margin-bottom:28px; }
+  .transfer-row { gap:12px; }
+}
+@media (max-width: 520px) {
+  .topbar { padding:11px 14px; align-items:center; }
+  .brand { gap:7px; font-size:16px; }
+  .brand-mark { width:28px; height:28px; }
+  .device-self { gap:5px; font-size:11px; }
+  .device-self .muted { display:none; }
+  .name-chip { padding:6px 8px; min-height:34px; font-size:11px; max-width:48vw; }
+  .shell { padding-left:14px; padding-right:14px; }
+  .intro { padding:30px 0 24px; }
+  .intro h1 { font-size:clamp(32px,9vw,42px); letter-spacing:-1.5px; }
+  .lead { margin-top:13px; font-size:14px; }
+  .share-box { align-items:flex-start; flex-direction:column; padding:14px; gap:12px; }
+  .share-copy { width:100%; }
+  .url-row { align-items:stretch; flex-direction:column; }
+  .url-row .button { width:100%; }
+  .qr-box { align-self:center; width:116px; height:116px; }
+  .qr-box canvas, .qr-box img { width:112px; height:112px; }
+  .device-grid { grid-template-columns:minmax(0,1fr); gap:9px; }
+  .device-card { min-height:unset; display:grid; grid-template-columns:40px minmax(0,1fr); grid-template-rows:auto auto auto; column-gap:10px; align-items:center; padding:12px; }
+  .device-icon { grid-row:1 / span 3; }
+  .device-name { font-size:14px; }
+  .device-type, .device-connect-label { margin:0; }
+  .devices-head { align-items:stretch; }
+  .pair-actions { grid-template-columns:minmax(0,1fr); width:100%; }
+  .pair-actions .button { white-space:normal; min-height:42px; font-size:12px; }
+  .pair-qr-panel { padding:13px; }
+  .pair-qr-content { flex-direction:column; gap:12px; }
+  .pair-qr-image { align-self:center; width:min(220px,100%); height:auto; min-height:100px; }
+  .pair-qr-image img, .pair-qr-image canvas { width:min(220px,100%); height:auto; }
+  .dialog { width:calc(100vw - 28px); max-width:none; padding:18px; }
+  .dialog-actions { flex-wrap:wrap; }
+  .dialog-actions .button { flex:1 1 120px; }
+  .transfer-row { grid-template-columns:minmax(0,1fr); }
+  .transfer-status { text-align:left; }
+  .footer-links { flex-wrap:wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+}

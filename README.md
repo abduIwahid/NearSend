@@ -1,35 +1,66 @@
 # NearSend
 
-Browser-based file sharing using WebRTC, with signaling and relay over WebSockets.
-
-## Local Node.js mode
-
-Run `npm install` then `npm start` on a computer. Open the URL printed in the terminal on both devices on the same network.
-
-## Vercel adaptation
-
-See [`VERCEL-DEPLOY.md`](VERCEL-DEPLOY.md). This is an experimental adaptation for Vercel's WebSocket beta. The in-memory signaling state is not shared between function instances, so reliable online discovery requires a shared Redis/pub-sub layer and must be tested before production use.
+NearSend is a browser-based file-sharing app designed to move files between devices without creating an account or uploading files to a cloud-storage service. It includes device discovery, pairing requests, QR invitations, transfer progress, and a responsive interface for phones, tablets, and desktop browsers.
 
 ## Features
 
-- WebRTC data-channel direct file transfer
-- WebSocket signaling and relay fallback
-- Multiple files and transfer progress
-- Device rename and QR support
-- PWA basics
+- Browser-to-browser file transfer using WebRTC data channels when a direct connection can be established.
+- WebSocket signaling for device discovery and connection negotiation.
+- QR invitation generation and QR scanning through the camera, with image-upload fallback.
+- Transfer acceptance/decline prompts, progress indicators, and cancellation.
+- Add-to-home-screen metadata and app icons.
+- Responsive layouts for narrow phones through desktop screens.
 
+## Run locally
 
+Requirements: Node.js 18 or newer and npm.
 
-## Current scope
-NearSend currently supports online device discovery, connection requests, QR invitation generation, and browser-based file transfer. Offline pairing is intentionally disabled. QR generation uses the `/api/qr` endpoint; make sure `api/qr.js` and the `qrcode` dependency are deployed together.
+```bash
+npm install
+npm start
+```
 
+Open the local address printed by the server. For another device on the same Wi-Fi, use the computer's LAN IP address and ensure the firewall allows the server port. Camera access generally requires HTTPS or localhost; a plain HTTP LAN address may prevent browser camera APIs from working.
 
-## File transfer size limits
+For development with automatic restart:
 
-The current browser transfer code does **not** define a fixed maximum file size. Files are sent over the WebRTC data channel in 16 KiB chunks. The receiver stores all received chunks in browser memory and then builds a `Blob`, so the practical maximum depends on the devices' available memory and browser behavior; very large files can fail, especially on phones.
+```bash
+npm run dev
+```
 
-The WebSocket relay is a fallback path, not the intended bulk-transfer path. The server currently accepts WebSocket messages up to 128 KiB, and the relay implementation forwards binary frames up to 64 KiB plus an 8-byte peer identifier. The current 16 KiB chunks fit within those relay frame checks. This is not a 64 KiB maximum file size because a file is split into many chunks.
+## Deploy
 
-Vercel's HTTP Function request/response payload limit of 4.5 MB applies to HTTP Function bodies, not to WebRTC data sent directly between browsers. Vercel WebSocket connections are supported, but connections are pinned to a function instance and future connections are not guaranteed to land on the same instance. This project currently keeps signaling rooms in process memory, so device discovery/pairing can fail when clients connect to different instances. For production reliability, move signaling/presence to shared infrastructure (for example Redis/pub-sub) and test across separate devices.
+Vercel configuration is included. Review [VERCEL-DEPLOY.md](VERCEL-DEPLOY.md) and [DEPLOY-AND-TEST.md](DEPLOY-AND-TEST.md) before deploying. The Vercel WebSocket/signaling implementation has platform constraints; test device discovery and transfers on the deployed URL instead of assuming that local behavior proves production behavior.
 
-**Practical recommendation:** ordinary KB/MB files and a 100 MB target are reasonable to test, but 100 MB is not a guaranteed maximum. For reliable large-file support, implement disk-backed/streamed receiving where browser APIs permit it, add transfer integrity checks and resume support, and test on lower-memory mobile devices.
+## QR scanner compatibility
+
+The scanner uses `jsQR` loaded from jsDelivr to support browsers such as iOS Safari that do not implement the native `BarcodeDetector` API. Camera access still depends on browser permission and a secure context (HTTPS or localhost). If the camera cannot be opened, the scanner offers QR-image selection.
+
+## Project structure
+
+```text
+.
+├── api/                 # Vercel serverless endpoints (QR, WebSocket, info)
+├── public/
+│   ├── css/             # Application and legal-page styles
+│   ├── icons/           # Favicon, PWA icons, and source logo
+│   ├── js/              # UI, signaling, peer connection, transfer logic
+│   ├── index.html       # Main application
+│   ├── manifest.json    # Installable web-app metadata
+│   └── ...              # Privacy, terms, and 404 pages
+├── server/              # Local Node.js server and signaling implementation
+├── .gitignore
+├── package.json
+└── vercel.json
+```
+
+## GitHub hygiene
+
+Commit the source code, documentation, `package.json`, deployment configuration, and public assets. Do not commit `node_modules`, local `.env` files, editor folders, logs, or build/test artifacts. Never put API secrets or credentials in files served from `public/`.
+
+## Before sharing publicly
+
+- Test on iOS Safari and at least one Android browser at narrow widths (320–430 px), plus a laptop/desktop.
+- Test camera permission denied, QR scanning, QR-image fallback, pairing acceptance/decline, and small and large file transfers.
+- Test both devices on the deployed HTTPS URL and on different networks.
+- Remember that direct WebRTC connectivity can fail across some network/NAT configurations; this is not guaranteed to work merely because two devices are nearby. Verify actual transfer behavior on the target deployment.

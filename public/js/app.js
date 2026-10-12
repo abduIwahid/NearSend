@@ -162,27 +162,95 @@ $('generateQrButton').addEventListener('click',async()=>{
   }
 });
 $('closeQrButton').addEventListener('click',()=>$('pairQrPanel').hidden=true);
-$('scanQrButton').addEventListener('click',async()=>{
-  if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
-    try {
-      const detector=new BarcodeDetector({formats:['qr_code']});
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-      const panel=$('pairQrPanel'),box=$('pairQrImage');box.replaceChildren();
-      panel.hidden=false;$('pairQrTitle').textContent='Scan QR code';$('pairQrHelp').textContent='Point your camera at a NearSend QR code.';
-      const video=document.createElement('video');video.autoplay=true;video.playsInline=true;video.muted=true;video.srcObject=stream;video.style.width='min(100%,320px)';video.style.borderRadius='12px';box.append(video);
-      await video.play();
-      let stopped=false;
-      const stop=()=>{stopped=true;stream.getTracks().forEach(t=>t.stop());};
-      $('closeQrButton').onclick=()=>{stop();panel.hidden=true;};
-      const scan=async()=>{if(stopped||panel.hidden)return;try{if(video.readyState>=2){const codes=await detector.detect(video);if(codes.length){const target=new URL(codes[0].rawValue);if(target.origin!==location.origin)throw new Error('This QR code is not for this NearSend website.');stop();location.href=target.href;return;}}}catch(e){stop();ui.toast(e.message||'Could not scan QR code.',true);return;}requestAnimationFrame(scan);};
-      requestAnimationFrame(scan);return;
-    } catch (e) {
-      ui.toast('Camera unavailable. Choose a QR image instead.',true);
-    }
+async function loadQrDecoder() {
+  if (window.jsQR) return window.jsQR;
+  if (window.__nearSendQrDecoderPromise) return window.__nearSendQrDecoderPromise;
+  window.__nearSendQrDecoderPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+    script.onload = () => window.jsQR ? resolve(window.jsQR) : reject(new Error('QR decoder failed to load.'));
+    script.onerror = () => reject(new Error('Could not load the QR decoder. Check your internet connection.'));
+    document.head.append(script);
+  });
+  return window.__nearSendQrDecoderPromise;
+}
+function openScannedInvite(value) {
+  let target;
+  try { target = new URL(value); } catch { throw new Error('The QR code does not contain a valid link.'); }
+  if (!['http:', 'https:'].includes(target.protocol) || target.origin !== location.origin) {
+    throw new Error('This QR code is not for this NearSend website.');
   }
-  const input=$('qrCameraInput');input.value='';
-  input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{if(!('BarcodeDetector'in window))throw new Error('QR image scanning is not supported in this browser. Use your camera app to open the QR link.');const bitmap=await createImageBitmap(file);const detector=new BarcodeDetector({formats:['qr_code']});const codes=await detector.detect(bitmap);if(!codes.length)throw new Error('No QR code found in that image.');const target=new URL(codes[0].rawValue);if(target.origin!==location.origin)throw new Error('This QR code is not for this NearSend website.');location.href=target.href;}catch(e){ui.toast(e.message||'Could not read QR code.',true);}};
-  input.click();
+  location.href = target.href;
+}
+$('scanQrButton').addEventListener('click', async () => {
+  const panel = $('pairQrPanel'), box = $('pairQrImage');
+  box.replaceChildren(); panel.hidden = false;
+  $('pairQrTitle').textContent = 'Scan QR code';
+  $('pairQrHelp').textContent = 'Allow camera access and point it at a NearSend QR code. You can also choose a QR image.';
+  let stream = null, stopped = false, animation = 0;
+  const stop = () => {
+    stopped = true;
+    if (animation) cancelAnimationFrame(animation);
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  };
+  $('closeQrButton').onclick = () => { stop(); panel.hidden = true; };
+  try {
+    const decoderPromise = loadQrDecoder();
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        const jsQR = await decoderPromise;
+        const video = document.createElement('video');
+        video.autoplay = true; video.playsInline = true; video.muted = true;
+        video.setAttribute('aria-label', 'Camera view for scanning a QR code');
+        video.style.cssText = 'display:block;width:100%;max-width:420px;max-height:55vh;object-fit:cover;border-radius:12px;background:#111';
+        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const choose = document.createElement('button');
+        choose.type = 'button'; choose.className = 'button secondary'; choose.textContent = 'Choose QR image instead';
+        choose.addEventListener('click', () => { stop(); $('qrCameraInput').click(); });
+        box.append(video, choose); video.srcObject = stream; await video.play();
+        const scanFrame = () => {
+          if (stopped || panel.hidden) return;
+          if (video.readyState >= 2 && video.videoWidth) {
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const result = jsQR(pixels.data, pixels.width, pixels.height, { inversionAttempts: 'attemptBoth' });
+            if (result?.data) {
+              try { openScannedInvite(result.data); } catch (e) { stop(); ui.toast(e.message, true); return; }
+              stop(); return;
+            }
+          }
+          animation = requestAnimationFrame(scanFrame);
+        };
+        animation = requestAnimationFrame(scanFrame); return;
+      } catch (cameraError) {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        $('pairQrHelp').textContent = 'Camera access is unavailable. Choose an image of the QR code instead.';
+      }
+    }
+    const jsQR = await decoderPromise;
+    $('qrCameraInput').value = '';
+    $('qrCameraInput').onchange = async () => {
+      const file = $('qrCameraInput').files?.[0]; if (!file) return;
+      try {
+        const bitmap = await createImageBitmap(file), canvas = document.createElement('canvas');
+        canvas.width = bitmap.width; canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(bitmap, 0, 0); bitmap.close?.();
+        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const result = jsQR(pixels.data, pixels.width, pixels.height, { inversionAttempts: 'attemptBoth' });
+        if (!result?.data) throw new Error('No QR code found in that image.');
+        openScannedInvite(result.data);
+      } catch (e) { ui.toast(e.message || 'Could not read QR code.', true); }
+    };
+    $('qrCameraInput').click();
+  } catch (e) { ui.toast(e.message || 'QR scanner could not start.', true); }
 });
 $('renameButton').addEventListener('click',()=>{
   if(!self)return;
