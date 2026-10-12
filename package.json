@@ -2,7 +2,7 @@
   "name": "nearsend-vercel",
   "version": "1.2.0",
   "private": true,
-  "description": "NearSend adapted for online and experimental offline browser-to-browser sharing",
+  "description": "Online browser-to-browser file sharing with device pairing and QR invitations",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js"
