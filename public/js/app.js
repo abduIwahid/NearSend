@@ -16,12 +16,13 @@ function handlePairResponse(m){if(m.accepted){pairedDevices.add(m.from);ui.toast
 function beginPairConnection(p,initiator=true){let entry=peerConnections.get(p.id);if(!entry||entry.peer.pc.connectionState==='closed'){entry=makePeer(p.id,initiator);peerConnections.set(p.id,entry);}ui.toast(`Connecting to ${p.name}…`);setTimeout(()=>{if(transferManager.channels.get(p.id)?.readyState==='open'){pairedDevices.add(p.id);ui.toast(`Connected to ${p.name}. Choose files to send.`);}else if(!transferManager.channels.has(p.id))ui.toast(`Still connecting to ${p.name}. Keep both pages open.`,true);},2500);}
 const sig=connect({
   onHello:m=>{
+    ui.hideConnectionLoading();
     self=m;stun=m.stun;const saved=localStorage.getItem(nameKey);
     ui.setSelf(saved||m.name);
     if(saved&&saved!==m.name)sig.send({type:'rename',name:saved});
     ui.setStatus('Connected',mode);
   },
-  onPeers:m=>{peers.clear();m.list.forEach(p=>peers.set(p.id,p));ui.renderDevices(m.list,pickFiles);},
+  onPeers:m=>{ui.hideConnectionLoading();peers.clear();m.list.forEach(p=>peers.set(p.id,p));ui.renderDevices(m.list,pickFiles);},
   onPairRequest:m=>showPairRequest(m),
   onPairResponse:m=>handlePairResponse(m),
   onSignal:async m=>{

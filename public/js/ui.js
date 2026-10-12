@@ -8,6 +8,9 @@ export class UI {
     this.deviceList=$('deviceList'); this.empty=$('emptyState'); this.count=$('deviceCount');
     this.transfers=$('transfersList'); this.transferSection=$('transfersSection'); this.dialogBackdrop=$('dialogBackdrop');
     this.activeDialog=null; this.lastFocus=null;renderIcons();
+    this.skeletonTimer=setTimeout(()=>{if($('deviceList').children.length===0)this.showConnectionLoading();},700);
+    this.issueTimer=setTimeout(()=>{if($('deviceList').children.length===0&&$('connectionSkeleton').hidden===false)$('connectionIssue').hidden=false;},12000);
+    $('retryConnectionButton').addEventListener('click',()=>location.reload());
     $('declineButton').addEventListener('click',()=>this.finishDialog(false));
     $('acceptButton').addEventListener('click',()=>this.finishDialog(true));
     $('dialogBackdrop').addEventListener('click',e=>{if(e.target===this.dialogBackdrop)this.finishDialog(false)});
@@ -21,7 +24,17 @@ export class UI {
       }
     });
   }
+  showConnectionLoading(message='This can take a few seconds on a slow connection.') {
+    $('connectionSkeleton').hidden=false;
+    $('skeletonTitle').textContent='Finding nearby devices';
+    $('skeletonMessage').textContent=message;
+  }
+  hideConnectionLoading() {
+    $('connectionSkeleton').hidden=true;
+    clearTimeout(this.skeletonTimer); clearTimeout(this.issueTimer);
+  }
   renderDevices(list,onPick) {
+    this.hideConnectionLoading();
     this.deviceList.replaceChildren(); this.count.textContent=list.length;
     this.empty.hidden=list.length>0;
     for(const p of list){
@@ -29,7 +42,7 @@ export class UI {
       b.setAttribute('aria-label',`Send file to ${p.name}`);
       const ico=document.createElement('span');ico.className='device-icon';ico.setAttribute('aria-hidden','true');ico.innerHTML='<i data-lucide="'+iconFor(p.deviceType)+'"></i>';
       const name=document.createElement('span');name.className='device-name';name.textContent=p.name;
-      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType;const action=document.createElement('span');action.className='device-connect-label';action.textContent='Request to connect →';
+      const type=document.createElement('span');type.className='device-type';type.textContent=p.deviceType;const action=document.createElement('span');action.className='device-connect-label';action.textContent='Request to connect';
       b.append(ico,name,type,action); b.addEventListener('click',()=>onPick(p));
       b.addEventListener('dragover',e=>{e.preventDefault();b.classList.add('dragover')});
       b.addEventListener('dragleave',()=>b.classList.remove('dragover'));
@@ -38,7 +51,16 @@ export class UI {
     }
   }
   setSelf(name){$('renameButton').innerHTML='';const t=document.createElement('span');t.textContent=name;const e=document.createElement('span');e.innerHTML='<i data-lucide="pencil" aria-hidden="true"></i>';e.setAttribute('aria-hidden','true');$('renameButton').append(t,e);renderIcons($('renameButton'));}
-  setStatus(status,mode){$('connectionLabel').textContent=status;$('footerStatus').textContent=status==='Connected'?'Online · ready to share':`${status} · online mode`;}
+  setStatus(status,mode){
+    $('connectionLabel').textContent=status;
+    $('footerStatus').textContent=status==='Connected'?'Online · ready to share':`${status} · online mode`;
+    if(status==='reconnecting'){
+      this.showConnectionLoading('The connection was interrupted. NearSend is trying to reconnect.');
+      $('connectionIssue').hidden=true;
+      clearTimeout(this.issueTimer);
+      this.issueTimer=setTimeout(()=>{if(!$('connectionSkeleton').hidden)$('connectionIssue').hidden=false;},12000);
+    }
+  }
   showShare(url,qrData) {
     $('shareBox').hidden=false;$('shareUrl').textContent=url;
     const box=$('qr');box.replaceChildren();

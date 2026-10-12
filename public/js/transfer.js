@@ -62,7 +62,7 @@ export class TransferManager {
           const timer=setTimeout(()=>reject(new Error('Receiver did not confirm the file')),120000);
           this.pending.set(tid,{resolve:value=>{clearTimeout(timer);resolve(value);},reject,peerId});
         });
-        if (result === 'done') this.ui.updateTransfer(tid,{state:'Sent successfully',percent:100,bytes:file.size,size:file.size,done:true});
+        if (result === 'done') { this.ui.updateTransfer(tid,{state:'Sent successfully',percent:100,bytes:file.size,size:file.size,done:true}); this.ui.toast(`File shared successfully: ${file.name}`); }
         else throw new Error('Receiver did not confirm the file');
       } catch(e) {
         this.sendControl(peerId,{t:'cancel',tid});
@@ -108,6 +108,7 @@ export class TransferManager {
     const blob=new Blob(r.chunks,{type:r.mime||'application/octet-stream'});
     const url=URL.createObjectURL(blob);
     this.ui.updateTransfer(tid,{state:'Received — ready to save',percent:100,bytes:r.size,size:r.size,done:true,saveUrl:url,saveName:r.name});
+    this.ui.toast(`File received successfully: ${r.name}`);
     this.sendControl(peerId,{t:'done',tid,received:r.received});
   }
   cancel(tid) {
