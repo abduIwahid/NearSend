@@ -5,7 +5,7 @@ import { UI } from './ui.js';
 
 const ui=new UI();
 const peers=new Map(), peerConnections=new Map(), pendingFiles={};
-let self=null, stun=null, mode='local', transferManager;
+let self=null, stun=null, mode='local', transferManager, queuedFiles=null;
 const nameKey='nearsend-device-name';
 function signalSend(m){sig.send({type:'signal',...m});}
 const sig=connect({
@@ -28,6 +28,90 @@ const sig=connect({
   onStatus:s=>{ui.setStatus(s,mode);if(s==='reconnecting')ui.toast('Connection lost. Reconnecting…',true);}
 });
 transferManager=new TransferManager({ui,sendSignal:signalSend});
+
+// Offline pairing uses WebRTC with no STUN/TURN server. Devices exchange SDP
+// manually (copy/paste) while on the same Wi-Fi or hotspot.
+const offlinePeerId='offline-peer';
+let offlinePc=null, offlineChannel=null, offlineRole=null;
+const localCode=$('localCode'), remoteCode=$('remoteCode'), offlineStatus=$('offlineStatus');
+function setOfflineStatus(message,connected=false){offlineStatus.textContent=message;$('sendOfflineFilesButton').disabled=!connected;}
+function waitForIce(pc,timeoutMs=15000){
+  if(pc.iceGatheringState==='complete')return Promise.resolve();
+  return new Promise(resolve=>{
+    let finished=false;
+    const done=()=>{if(finished)return;finished=true;clearTimeout(timer);pc.removeEventListener('icegatheringstatechange',check);resolve();};
+    const check=()=>{if(pc.iceGatheringState==='complete')done();};
+    const timer=setTimeout(done,timeoutMs);
+    pc.addEventListener('icegatheringstatechange',check);
+  });
+}
+function closeOfflinePeer(){
+  try{offlineChannel?.close();}catch{}
+  try{offlinePc?.close();}catch{}
+  offlinePc=null;offlineChannel=null;offlineRole=null;
+  setOfflineStatus('Not connected');
+}
+function setupOfflineChannel(channel){
+  offlineChannel=channel;channel.binaryType='arraybuffer';
+  channel.onopen=()=>{transferManager.register(offlinePeerId,channel);setOfflineStatus('Connected — offline transfer ready',true);ui.toast('Offline device connected');};
+  channel.onclose=()=>{setOfflineStatus('Connection closed');};
+  channel.onerror=()=>{setOfflineStatus('Connection error');};
+  channel.onmessage=event=>transferManager.onMessage(offlinePeerId,event.data);
+}
+function newOfflinePeer(){
+  closeOfflinePeer();
+  offlinePc=new RTCPeerConnection({iceServers:[]});
+  offlinePc.ondatachannel=event=>setupOfflineChannel(event.channel);
+  offlinePc.onconnectionstatechange=()=>{
+    if(offlinePc?.connectionState==='connected'&&offlineChannel?.readyState==='open')setOfflineStatus('Connected — offline transfer ready',true);
+    else if(['failed','disconnected','closed'].includes(offlinePc?.connectionState)&&offlineChannel?.readyState!=='open')setOfflineStatus(`Connection ${offlinePc.connectionState}`);
+  };
+  return offlinePc;
+}
+function parseCode(text){
+  let value;try{value=JSON.parse(text.trim());}catch{throw new Error('That code is not valid JSON. Copy the entire code, including both braces.');}
+  if(!value||!['offer','answer'].includes(value.type)||!value.sdp)throw new Error('This does not look like a NearSend connection code.');
+  return value;
+}
+$('createOfferButton').addEventListener('click',async()=>{
+  try{
+    const pc=newOfflinePeer();offlineRole='offerer';setupOfflineChannel(pc.createDataChannel('nearsend-files',{ordered:true}));
+    setOfflineStatus('Creating code…');
+    await pc.setLocalDescription(await pc.createOffer());await waitForIce(pc);
+    localCode.value=JSON.stringify(pc.localDescription);setOfflineStatus('Code ready. Share it with Device 2.');
+    ui.toast('Connection code created. Copy it to Device 2.');
+  }catch(error){setOfflineStatus('Could not create code');ui.toast(error.message||'Could not create offline code',true);}
+});
+$('processOfferButton').addEventListener('click',async()=>{
+  try{
+    const offer=parseCode(remoteCode.value);if(offer.type!=='offer')throw new Error('Paste Device 1’s offer code into “Other device’s connection code”.');
+    const pc=newOfflinePeer();offlineRole='answerer';setOfflineStatus('Creating reply code…');
+    await pc.setRemoteDescription(offer);await pc.setLocalDescription(await pc.createAnswer());await waitForIce(pc);
+    localCode.value=JSON.stringify(pc.localDescription);setOfflineStatus('Reply ready. Send it back to Device 1.');
+    ui.toast('Reply code created. Copy it back to Device 1.');
+  }catch(error){setOfflineStatus('Could not process code');ui.toast(error.message||'Could not process offline code',true);}
+});
+$('applyAnswerButton').addEventListener('click',async()=>{
+  try{
+    const answer=parseCode(remoteCode.value);if(answer.type!=='answer')throw new Error('Paste Device 2’s reply code into “Other device’s connection code”.');
+    if(!offlinePc||offlineRole!=='offerer')throw new Error('First create a connection code on Device 1.');
+    await offlinePc.setRemoteDescription(answer);setOfflineStatus('Connecting to Device 2…');
+    ui.toast('Reply accepted. Waiting for the local connection…');
+  }catch(error){ui.toast(error.message||'Could not connect offline',true);}
+});
+$('copyLocalCodeButton').addEventListener('click',async()=>{
+  if(!localCode.value.trim()){ui.toast('Create a connection code first.',true);return;}
+  try{await navigator.clipboard.writeText(localCode.value);ui.toast('Connection code copied. Share it with the other device.');}
+  catch{localCode.focus();localCode.select();ui.toast('Code selected. Copy it and share it with the other device.');}
+});
+$('resetOfflineButton').addEventListener('click',()=>{closeOfflinePeer();localCode.value='';remoteCode.value='';setOfflineStatus('Not connected');});
+$('sendOfflineFilesButton').addEventListener('click',()=>{
+  if(!transferManager.channels.has(offlinePeerId)){ui.toast('Connect the other device first.',true);return;}
+  const input=$('fileInput');input.value='';input.onchange=async()=>{
+    const files=Array.from(input.files||[]);if(!files.length)return;
+    try{await transferManager.sendFiles(offlinePeerId,files,'offline device');}catch(error){ui.toast(error.message||'Offline send failed',true);}
+  };input.click();
+});
 function makePeer(id,initiator){
   const entry={peer:null,channel:null,relayTimer:null};
   const peer=createPeer({remoteId:id,stun,initiator,signalSend,onChannel:ch=>{
@@ -45,10 +129,31 @@ function makePeer(id,initiator){
 }
 async function pickFiles(p,dropFiles){
   if(!peers.has(p.id))return;
-  let files=dropFiles;
-  if(!files){$('fileInput').value='';pendingFiles.target=p;const old=$('fileInput').onchange;$('fileInput').onchange=null;$('fileInput').click();$('fileInput').onchange=()=>{const selected=$('fileInput').files;if(selected.length)beginSend(p,selected);};return;}
-  if(files.length)beginSend(p,files);
+  if(dropFiles?.length){queuedFiles=null;updateSelectedFiles(null);beginSend(p,dropFiles);return;}
+  if(queuedFiles?.length){const files=queuedFiles;queuedFiles=null;updateSelectedFiles(null);beginSend(p,files);return;}
+  $('fileInput').value='';
+  $('fileInput').onchange=()=>{
+    const selected=$('fileInput').files;
+    if(selected.length){queuedFiles=Array.from(selected);updateSelectedFiles(queuedFiles);beginSend(p,queuedFiles);queuedFiles=null;updateSelectedFiles(null);}
+  };
+  $('fileInput').click();
 }
+function updateSelectedFiles(files){
+  const label=$('selectedFilesLabel');
+  if(!files?.length){label.textContent='Choose files from your device or drag and drop them here.';return;}
+  const total=files.reduce((sum,f)=>sum+f.size,0);
+  label.textContent=`${files.length} file${files.length===1?'':'s'} selected · ${formatSize(total)}. Tap a device below to send.`;
+}
+function formatSize(bytes){
+  if(bytes<1024)return `${bytes} B`;
+  const units=['KB','MB','GB','TB'];let size=bytes/1024,i=0;
+  while(size>=1024&&i<units.length-1){size/=1024;i++;}
+  return `${size.toFixed(size>=10?1:2)} ${units[i]}`;
+}
+const dropZone=$('fileDropZone');
+$('chooseFilesButton').addEventListener('click',()=>{$('fileInput').value='';$('fileInput').onchange=()=>{const files=Array.from($('fileInput').files||[]);if(!files.length)return;queuedFiles=files;updateSelectedFiles(files);if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(!peers.size){ui.toast('No nearby devices yet. Keep these files selected, then try again when a device appears.',true);queuedFiles=files;updateSelectedFiles(files);}else{ui.toast('Files selected. Tap the device you want to send them to.');}};$('fileInput').click();});
+for(const eventName of ['dragenter','dragover'])dropZone.addEventListener(eventName,e=>{e.preventDefault();dropZone.classList.add('dragover');});
+for(const eventName of ['dragleave','drop'])dropZone.addEventListener(eventName,e=>{e.preventDefault();if(eventName==='dragleave'&&dropZone.contains(e.relatedTarget))return;dropZone.classList.remove('dragover');if(eventName==='drop'&&e.dataTransfer?.files?.length){const files=Array.from(e.dataTransfer.files);queuedFiles=files;updateSelectedFiles(files);if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(peers.size>1){ui.toast('Files selected. Tap the device you want to send them to.');}else ui.toast('No nearby devices found yet. Keep this page open and try again.',true);}});
 async function beginSend(p,files){
   let entry=peerConnections.get(p.id);
   if(!entry||entry.peer.pc.connectionState==='closed'){
@@ -138,4 +243,4 @@ async function setupInfo(){
   }catch{mode='local';}
 }
 setupInfo();
-if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('/sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{if(navigator.onLine)ui.toast('Offline app files are being cached for later use.');}).catch(()=>{});}

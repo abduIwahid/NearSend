@@ -19,3 +19,7 @@ This package adapts NearSend's static frontend and HTTP endpoints to Vercel and 
 - WebRTC direct transfer may work once peers have successfully exchanged signaling messages. WebSocket relay fallback also depends on signaling routing and may not work across separate instances.
 - The original standalone local mode remains available with `npm start` on a computer, but this Vercel adaptation is for online hosting.
 - Test with two devices. Do not treat a successful Vercel build as proof that file transfers work.
+
+
+## Preparing offline use
+Visit the deployed site while online and wait for the service worker to install. Reopen the app once after deployment so the current app shell is cached. Offline transfer uses the **Offline connection** section and manual offer/reply copy-paste; it does not use Vercel for the peer connection. This is experimental and requires a local Wi-Fi/hotspot network that permits peer-to-peer traffic.

@@ -1,8 +1,8 @@
 {
   "name": "nearsend-vercel",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
-  "description": "NearSend adapted for Vercel Functions WebSocket beta",
+  "description": "NearSend adapted for online and experimental offline browser-to-browser sharing",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js"

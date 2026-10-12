@@ -38,6 +38,27 @@
       <div id="qr" class="qr-box" aria-label="QR code for this address"></div>
     </section>
 
+    <section id="fileDropZone" class="file-drop-zone" aria-label="Choose or drop files to send">
+      <div class="drop-symbol" aria-hidden="true">↑</div>
+      <h2>Send files to a nearby device</h2>
+      <p id="selectedFilesLabel">Choose files from your device or drag and drop them here.</p>
+      <button id="chooseFilesButton" class="button primary" type="button">Choose files</button>
+      <p class="drop-hint">You can select multiple files. Then choose a device below.</p>
+    </section>
+
+    <section class="offline-panel" aria-labelledby="offlineTitle">
+      <div class="section-head"><div><p class="section-label">NO INTERNET REQUIRED</p><h2 id="offlineTitle">Offline connection</h2></div><span class="connection-label">Same Wi-Fi / hotspot</span></div>
+      <p class="offline-intro">Use this when both devices have no internet. Connect them to the same Wi-Fi or hotspot, then exchange the connection text below. The text is exchanged locally by you; NearSend does not send it to a server.</p>
+      <div class="offline-actions"><button id="createOfferButton" class="button primary" type="button">Device 1: Create connection code</button><button id="resetOfflineButton" class="button secondary" type="button">Reset</button></div>
+      <label class="offline-label" for="localCode">Your connection code</label>
+      <textarea id="localCode" class="offline-code" rows="4" spellcheck="false" placeholder="Device 1: create a code here. Device 2: paste Device 1's code here."></textarea>
+      <div class="offline-actions"><button id="processOfferButton" class="button secondary" type="button">Device 2: Create reply code</button><button id="applyAnswerButton" class="button primary" type="button">Device 1: Connect using reply</button><button id="copyLocalCodeButton" class="button secondary" type="button">Copy code</button></div>
+      <label class="offline-label" for="remoteCode">Other device's connection code</label>
+      <textarea id="remoteCode" class="offline-code" rows="4" spellcheck="false" placeholder="Paste the other device's code here."></textarea>
+      <div class="offline-actions"><button id="sendOfflineFilesButton" class="button primary" type="button" disabled>Choose files to send offline</button><span id="offlineStatus" class="connection-label" aria-live="polite">Not connected</span></div>
+      <p class="tiny-note">Browser-only offline pairing is experimental. Keep this page open on both devices until the transfer finishes. On iPhone, open the app from the Home Screen after visiting it online once.</p>
+    </section>
+
     <section class="devices-section">
       <div class="section-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2></div><span id="connectionLabel" class="connection-label">Connecting…</span></div>
       <div id="deviceList" class="device-grid" aria-live="polite" aria-label="Nearby devices"></div>
