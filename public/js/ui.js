@@ -38,7 +38,7 @@ export class UI {
     }
   }
   setSelf(name){$('renameButton').innerHTML='';const t=document.createElement('span');t.textContent=name;const e=document.createElement('span');e.innerHTML='<i data-lucide="pencil" aria-hidden="true"></i>';e.setAttribute('aria-hidden','true');$('renameButton').append(t,e);renderIcons($('renameButton'));}
-  setStatus(status,mode){$('connectionLabel').textContent=status;$('footerStatus').textContent=`${status} · ${mode} mode`;}
+  setStatus(status,mode){$('connectionLabel').textContent=status;$('footerStatus').textContent=status==='Connected'?'Online · ready to share':`${status} · online mode`;}
   showShare(url,qrData) {
     $('shareBox').hidden=false;$('shareUrl').textContent=url;
     const box=$('qr');box.replaceChildren();

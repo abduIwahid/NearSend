@@ -1,3 +1,4 @@
+const $ = id => document.getElementById(id);
 import { connect } from './signaling.js';
 import { createPeer } from './peer.js';
 import { TransferManager } from './transfer.js';
@@ -154,10 +155,34 @@ $('generateQrButton').addEventListener('click',async()=>{
   try {
     if(!window.QRCode) await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=resolve;s.onerror=reject;document.head.append(s);});
     new window.QRCode(box,{text:invite.href,width:220,height:220,colorDark:'#111111',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
-  } catch {box.textContent='Could not generate a QR code. Please check your connection and try again.';}
+  } catch (error) {
+    box.textContent='QR generation failed. Please try again.';
+    ui.toast('Could not generate QR code. Check that /api/qr is deployed.', true);
+  }
 });
 $('closeQrButton').addEventListener('click',()=>$('pairQrPanel').hidden=true);
-$('scanQrButton').addEventListener('click',()=>{if(!('BarcodeDetector'in window)){ui.toast('This browser cannot scan QR codes directly. Use your camera app to scan the code, then return to NearSend.',true);return;}const input=$('qrCameraInput');input.value='';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const bitmap=await createImageBitmap(file);const detector=new BarcodeDetector({formats:['qr_code']});const codes=await detector.detect(bitmap);if(!codes.length)throw new Error('No QR code found in that image.');const target=new URL(codes[0].rawValue);if(target.origin!==location.origin)throw new Error('This QR code is not for this NearSend website.');location.href=target.href;}catch(e){ui.toast(e.message||'Could not read QR code.',true);}};input.click();});
+$('scanQrButton').addEventListener('click',async()=>{
+  if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
+    try {
+      const detector=new BarcodeDetector({formats:['qr_code']});
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      const panel=$('pairQrPanel'),box=$('pairQrImage');box.replaceChildren();
+      panel.hidden=false;$('pairQrTitle').textContent='Scan QR code';$('pairQrHelp').textContent='Point your camera at a NearSend QR code.';
+      const video=document.createElement('video');video.autoplay=true;video.playsInline=true;video.muted=true;video.srcObject=stream;video.style.width='min(100%,320px)';video.style.borderRadius='12px';box.append(video);
+      await video.play();
+      let stopped=false;
+      const stop=()=>{stopped=true;stream.getTracks().forEach(t=>t.stop());};
+      $('closeQrButton').onclick=()=>{stop();panel.hidden=true;};
+      const scan=async()=>{if(stopped||panel.hidden)return;try{if(video.readyState>=2){const codes=await detector.detect(video);if(codes.length){const target=new URL(codes[0].rawValue);if(target.origin!==location.origin)throw new Error('This QR code is not for this NearSend website.');stop();location.href=target.href;return;}}}catch(e){stop();ui.toast(e.message||'Could not scan QR code.',true);return;}requestAnimationFrame(scan);};
+      requestAnimationFrame(scan);return;
+    } catch (e) {
+      ui.toast('Camera unavailable. Choose a QR image instead.',true);
+    }
+  }
+  const input=$('qrCameraInput');input.value='';
+  input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{if(!('BarcodeDetector'in window))throw new Error('QR image scanning is not supported in this browser. Use your camera app to open the QR link.');const bitmap=await createImageBitmap(file);const detector=new BarcodeDetector({formats:['qr_code']});const codes=await detector.detect(bitmap);if(!codes.length)throw new Error('No QR code found in that image.');const target=new URL(codes[0].rawValue);if(target.origin!==location.origin)throw new Error('This QR code is not for this NearSend website.');location.href=target.href;}catch(e){ui.toast(e.message||'Could not read QR code.',true);}};
+  input.click();
+});
 $('renameButton').addEventListener('click',()=>{
   if(!self)return;
   const current=localStorage.getItem(nameKey)||self.name;
@@ -188,4 +213,4 @@ async function setupInfo(){
   }catch{mode='local';}
 }
 setupInfo();
-if('serviceWorker'in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('/sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{if(navigator.onLine)ui.toast('Offline app files are being cached for later use.');}).catch(()=>{});}
+
