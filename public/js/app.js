@@ -78,7 +78,7 @@ function formatSize(bytes){
   return `${size.toFixed(size>=10?1:2)} ${units[i]}`;
 }
 const dropZone=$('fileDropZone');
-$('chooseFilesButton').addEventListener('click',()=>{$('fileInput').value='';$('fileInput').onchange=()=>{const files=Array.from($('fileInput').files||[]);if(!files.length)return;queuedFiles=files;updateSelectedFiles(files);if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(!peers.size){ui.toast('No nearby devices yet. Keep these files selected, then try again when a device appears.',true);queuedFiles=files;updateSelectedFiles(files);}else{ui.toast('Files selected. Tap the device you want to send them to.');}};$('fileInput').click();});
+$('chooseFilesButton').addEventListener('click',()=>{const input=$('fileInput');input.value='';input.onchange=()=>{const files=Array.from(input.files||[]);if(!files.length)return;queuedFiles=files;updateSelectedFiles(files);if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(!peers.size){ui.toast('No nearby devices yet. Keep these files selected, then try again when a device appears.',true);queuedFiles=files;updateSelectedFiles(files);}else{ui.toast('Files selected. Tap the device you want to send them to.');}};try{input.click();}catch(e){ui.toast('Your browser blocked the file picker. Try again or use drag and drop.',true);}});
 for(const eventName of ['dragenter','dragover'])dropZone.addEventListener(eventName,e=>{e.preventDefault();dropZone.classList.add('dragover');});
 for(const eventName of ['dragleave','drop'])dropZone.addEventListener(eventName,e=>{e.preventDefault();if(eventName==='dragleave'&&dropZone.contains(e.relatedTarget))return;dropZone.classList.remove('dragover');if(eventName==='drop'&&e.dataTransfer?.files?.length){const files=Array.from(e.dataTransfer.files);queuedFiles=files;updateSelectedFiles(files);if(peers.size===1){const target=peers.values().next().value;queuedFiles=null;updateSelectedFiles(null);beginSend(target,files);}else if(peers.size>1){ui.toast('Files selected. Tap the device you want to send them to.');}else ui.toast('No nearby devices found yet. Keep this page open and try again.',true);}});
 async function beginSend(p,files){
@@ -156,8 +156,8 @@ $('generateQrButton').addEventListener('click',async()=>{
     if(!window.QRCode) await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=resolve;s.onerror=reject;document.head.append(s);});
     new window.QRCode(box,{text:invite.href,width:220,height:220,colorDark:'#111111',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
   } catch (error) {
-    box.textContent='QR generation failed. Please try again.';
-    ui.toast('Could not generate QR code. Check that /api/qr is deployed.', true);
+    box.textContent='QR generation failed. Check your connection and reload the page.';
+    ui.toast('QR generation failed. The QR library or /api/qr endpoint could not be loaded.', true);
   }
 });
 $('closeQrButton').addEventListener('click',()=>$('pairQrPanel').hidden=true);
@@ -214,3 +214,6 @@ async function setupInfo(){
 }
 setupInfo();
 
+
+window.addEventListener('error', (event) => { console.error('NearSend error:', event.error || event.message); const region=document.getElementById('toastRegion'); if(region){const el=document.createElement('div');el.className='toast error';el.textContent='NearSend encountered a script error. Reload the page; if it continues, check the deployment files.';region.append(el);} });
+window.addEventListener('unhandledrejection', (event) => { console.error('NearSend async error:', event.reason); });

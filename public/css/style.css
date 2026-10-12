@@ -13,3 +13,10 @@
 
 /* Icon sizing and QR display */
 [data-lucide],.device-icon svg,.brand-mark svg,.lock-icon svg,.drop-symbol svg,.empty-icon svg,.file-icon svg{width:1.25em;height:1.25em;stroke-width:1.8;vertical-align:middle}.brand-mark,.device-icon,.lock-icon,.drop-symbol,.empty-icon,.file-icon{display:inline-flex;align-items:center;justify-content:center}.pair-qr-image img,.pair-qr-image canvas{display:block;width:min(220px,100%);height:auto;margin:0 auto;image-rendering:pixelated}.pair-qr-panel[hidden]{display:none!important}
+
+/* Interaction and responsive safeguards */
+button { cursor: pointer; touch-action: manipulation; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+#fileInput { position: fixed; left: -10000px; width: 1px; height: 1px; opacity: 0; }
+.pair-actions { display:flex; flex-wrap:wrap; gap:.6rem; }
+@media(max-width:560px){ .devices-head{display:flex;flex-direction:column;align-items:stretch;} .pair-actions{display:grid;grid-template-columns:1fr 1fr;} .pair-actions .button{min-width:0;width:100%;} }
