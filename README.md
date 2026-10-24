@@ -32,6 +32,19 @@ npm run dev
 
 Vercel configuration is included. Review [VERCEL-DEPLOY.md](VERCEL-DEPLOY.md) and [DEPLOY-AND-TEST.md](DEPLOY-AND-TEST.md) before deploying. The Vercel WebSocket/signaling implementation has platform constraints; test device discovery and transfers on the deployed URL instead of assuming that local behavior proves production behavior.
 
+## Production configuration
+
+Environment variables understood by the standalone server and the Vercel functions:
+
+| Variable | Purpose |
+| --- | --- |
+| `STUN_URL` | STUN server URL (default: Google's public STUN). |
+| `TURN_URL` | TURN server URL, e.g. `turn:host:3478`. Strongly recommended: without TURN, direct connections fail on many networks and transfers fall back to the slower server relay. |
+| `TURN_USERNAME` / `TURN_CREDENTIAL` | Credentials for the TURN server. |
+| `SIGNAL_WS_URL` | Full WebSocket URL of a separately hosted signaling server, e.g. `wss://signaling.example.com/api/ws`. When set on the web deployment, the app connects there instead of the same-origin `/api/ws`. This is the reliable production setup, because signaling rooms are held in memory (see VERCEL-DEPLOY.md). Host the standalone server anywhere Node runs (Render, Railway, Fly.io, a VPS) with `MODE=online`. |
+| `MODE` | Standalone server mode: `online` or `local` (default `local`). |
+| `PORT` | Standalone server port (default `3000`). |
+
 ## QR scanner compatibility
 
 The scanner uses `jsQR` loaded from jsDelivr to support browsers such as iOS Safari that do not implement the native `BarcodeDetector` API. Camera access still depends on browser permission and a secure context (HTTPS or localhost). If the camera cannot be opened, the scanner offers QR-image selection.

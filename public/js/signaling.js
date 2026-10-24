@@ -1,11 +1,12 @@
-export function connect({ onHello, onPeers, onSignal, onRelay, onBinary, onStatus, onPairRequest, onPairResponse }) {
+export function connect({ signalUrl, onHello, onPeers, onSignal, onRelay, onBinary, onStatus, onPairRequest, onPairResponse }) {
   let ws, retry = 1000, stopped = false, currentId = null;
   const room = new URLSearchParams(location.search).get('room');
   function open() {
     if (stopped) return;
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const query = room ? `?room=${encodeURIComponent(room)}` : '';
-    ws = new WebSocket(`${proto}://${location.host}/api/ws${query}`);
+    let wsUrl;
+    if (signalUrl) { const u = new URL(signalUrl); if (room) u.searchParams.set('room', room); wsUrl = u.href; }
+    else { const proto = location.protocol === 'https:' ? 'wss' : 'ws'; const query = room ? `?room=${encodeURIComponent(room)}` : ''; wsUrl = `${proto}://${location.host}/api/ws${query}`; }
+    ws = new WebSocket(wsUrl);
     ws.binaryType = 'arraybuffer';
     ws.onopen = () => { retry = 1000; onStatus('connected'); };
     ws.onmessage = e => {

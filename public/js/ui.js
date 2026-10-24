@@ -87,14 +87,15 @@ export class UI {
     const fill=row.querySelector('.progress-fill'),side=row.querySelector('.transfer-status'),bottom=row.querySelector('.transfer-bottom'),meta=bottom?.children[0],speed=bottom?.children[1];
     if(data.percent!=null)fill.style.width=`${Math.max(0,Math.min(100,data.percent))}%`;
     if(data.bytes!=null&&meta)meta.textContent=`${formatBytes(data.bytes)} / ${formatBytes(data.size ?? 0)}`;
-    if(data.speed!=null&&speed)speed.textContent=`${formatBytes(data.speed)}/s`;
+    if(data.speed!=null&&speed){let label=`${formatBytes(data.speed)}/s`;if(data.bytes!=null&&data.size&&data.speed>0&&data.bytes<data.size){const secs=Math.max(1,Math.round((data.size-data.bytes)/data.speed));label+=` · ~${secs<60?secs+'s':Math.floor(secs/60)+'m '+(secs%60)+'s'} left`;}speed.textContent=label;}
     if(data.state&&side){side.childNodes[0].textContent=data.state;}
-    if(data.done){const btn=side?.querySelector('button');btn?.remove();if(data.error)row.classList.add('failed');}
+    if(data.done){const btn=side?.querySelector('button');btn?.remove();if(data.error)row.classList.add('failed');if(data.canRetry&&side){const rb=document.createElement('button');rb.className='button secondary small-button';rb.type='button';rb.textContent='Retry';rb.dataset.retry=id;rb.style.marginTop='8px';side.append(document.createElement('br'),rb);}}
     if(data.saveUrl){
       const a=document.createElement('a');a.href=data.saveUrl;a.download=data.saveName||'download';a.className='button primary small-button';a.textContent='Save file';a.style.display='inline-flex';a.style.alignItems='center';a.style.marginTop='8px';side.append(document.createElement('br'),a);
       a.addEventListener('click',()=>setTimeout(()=>URL.revokeObjectURL(data.saveUrl),60000),{once:true});
     }
   }
+  removeTransfer(id){document.getElementById(`transfer-${id}`)?.remove();if(!this.transfers.children.length)this.transferSection.hidden=true;}
   askReceive(meta){
     if(this.activeDialog){this.toast('Another incoming file is waiting. Accept or decline it first.',true);return;}
     this.activeDialog=meta;this.lastFocus=document.activeElement;

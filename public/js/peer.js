@@ -1,5 +1,8 @@
-export function createPeer({ remoteId, stun, signalSend, initiator, onChannel }) {
-  const iceServers = stun ? [{ urls: stun }] : [];
+export function createPeer({ remoteId, stun, ice, signalSend, initiator, onChannel }) {
+  const cfg = ice || (stun ? { stun, turn: null } : { stun: null, turn: null });
+  const iceServers = [];
+  if (cfg.stun) iceServers.push({ urls: cfg.stun });
+  if (cfg.turn && cfg.turn.urls) iceServers.push({ urls: cfg.turn.urls, username: cfg.turn.username || undefined, credential: cfg.turn.credential || undefined });
   const pc = new RTCPeerConnection({ iceServers });
   const pending = []; let remoteSet = false;
   pc.onicecandidate = e => { if (e.candidate) signalSend({ to: remoteId, kind: 'ice', data: e.candidate }); };

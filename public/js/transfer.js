@@ -9,7 +9,7 @@ const formatBytes = n => {
 };
 export class TransferManager {
   constructor({ ui, sendSignal }) {
-    this.ui = ui; this.sendSignal = sendSignal; this.channels = new Map(); this.pending = new Map(); this.receives = new Map(); this.transfers = new Map();
+    this.ui = ui; this.sendSignal = sendSignal; this.channels = new Map(); this.pending = new Map(); this.receives = new Map(); this.transfers = new Map(); this.failedSends = new Map();
   }
   register(peerId, channel) {
     this.channels.set(peerId, channel);
@@ -66,7 +66,9 @@ export class TransferManager {
         else throw new Error('Receiver did not confirm the file');
       } catch(e) {
         this.sendControl(peerId,{t:'cancel',tid});
-        this.ui.updateTransfer(tid,{state:e.message==='Cancelled'?'Cancelled':`Failed: ${e.message}`,done:true,error:true});
+        const cancelled = e.message==='Cancelled';
+        if (!cancelled) this.failedSends.set(tid, { peerId, file, peerLabel });
+        this.ui.updateTransfer(tid,{state:cancelled?'Cancelled':`Failed: ${e.message}`,done:true,error:true,canRetry:!cancelled});
       }
       this.transfers.delete(tid);
     }
@@ -110,6 +112,14 @@ export class TransferManager {
     this.ui.updateTransfer(tid,{state:'Received — ready to save',percent:100,bytes:r.size,size:r.size,done:true,saveUrl:url,saveName:r.name});
     this.ui.toast(`File received successfully: ${r.name}`);
     this.sendControl(peerId,{t:'done',tid,received:r.received});
+  }
+  async retrySend(tid) {
+    const f = this.failedSends.get(tid);
+    if (!f) return;
+    this.failedSends.delete(tid);
+    this.ui.removeTransfer?.(tid);
+    try { await this.sendFiles(f.peerId, [f.file], f.peerLabel); }
+    catch(e) { this.ui.toast(e.message, true); }
   }
   cancel(tid) {
     const t=this.transfers.get(tid);

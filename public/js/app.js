@@ -6,7 +6,7 @@ import { UI } from './ui.js';
 
 const ui=new UI();
 const peers=new Map(), peerConnections=new Map(), pendingFiles={};
-let self=null, stun=null, mode='local', transferManager, queuedFiles=null;
+let self=null, ice=null, mode='local', transferManager, queuedFiles=null;
 const pairedDevices=new Set();let incomingPairRequest=null;
 const nameKey='nearsend-device-name';
 function signalSend(m){sig.send({type:'signal',...m});}
@@ -14,10 +14,13 @@ function requestPair(p){if(!peers.has(p.id))return;sig.send({type:'pair-request'
 function showPairRequest(m){incomingPairRequest=m;const who=peers.get(m.from)?.name||m.name||'A nearby device';$('pairRequestText').textContent=`${who} wants to connect and share files with you. Accept only if you recognize this device.`;$('pairRequestBackdrop').hidden=false;}
 function handlePairResponse(m){if(m.accepted){pairedDevices.add(m.from);ui.toast(`${peers.get(m.from)?.name||'Device'} accepted. Establishing connection…`);const p=peers.get(m.from);if(p)beginPairConnection(p);}else ui.toast(`${peers.get(m.from)?.name||'Device'} declined the connection request.`,true);}
 function beginPairConnection(p,initiator=true){let entry=peerConnections.get(p.id);if(!entry||entry.peer.pc.connectionState==='closed'){entry=makePeer(p.id,initiator);peerConnections.set(p.id,entry);}ui.toast(`Connecting to ${p.name}…`);setTimeout(()=>{if(transferManager.channels.get(p.id)?.readyState==='open'){pairedDevices.add(p.id);ui.toast(`Connected to ${p.name}. Choose files to send.`);}else if(!transferManager.channels.has(p.id))ui.toast(`Still connecting to ${p.name}. Keep both pages open.`,true);},2500);}
-const sig=connect({
+let sig;
+function startSignaling(signalUrl){
+  sig=connect({
+  signalUrl,
   onHello:m=>{
     ui.hideConnectionLoading();
-    self=m;stun=m.stun;const saved=localStorage.getItem(nameKey);
+    self=m;ice={stun:m.stun||null,turn:m.turn||null};const saved=localStorage.getItem(nameKey);
     ui.setSelf(saved||m.name);
     if(saved&&saved!==m.name)sig.send({type:'rename',name:saved});
     ui.setStatus('Connected',mode);
@@ -35,12 +38,13 @@ const sig=connect({
   onRelay:m=>handleRelayControl(m),
   onBinary:data=>handleRelayBinary(data),
   onStatus:s=>{ui.setStatus(s,mode);if(s==='reconnecting')ui.toast('Connection lost. Reconnecting…',true);}
-});
+  });
+}
 transferManager=new TransferManager({ui,sendSignal:signalSend});
 
 function makePeer(id,initiator){
   const entry={peer:null,channel:null,relayTimer:null};
-  const peer=createPeer({remoteId:id,stun,initiator,signalSend,onChannel:ch=>{
+  const peer=createPeer({remoteId:id,ice,initiator,signalSend,onChannel:ch=>{
     entry.channel=ch;ch.binaryType='arraybuffer';
     ch.onopen=()=>{clearTimeout(entry.relayTimer);transferManager.register(id,ch);ui.toast(`Connected to ${peers.get(id)?.name||'device'}`);};
     ch.onclose=()=>{if(entry.channel===ch)entry.channel=null;};
@@ -143,6 +147,8 @@ ui.onReceiveDecision=(accept,meta)=>{
 };
 $('acceptPairButton').addEventListener('click',()=>{if(!incomingPairRequest)return;const req=incomingPairRequest;incomingPairRequest=null;$('pairRequestBackdrop').hidden=true;sig.send({type:'pair-response',to:req.from,accepted:true});pairedDevices.add(req.from);const p=peers.get(req.from);if(p)beginPairConnection(p,false);});
 $('rejectPairButton').addEventListener('click',()=>{if(incomingPairRequest)sig.send({type:'pair-response',to:incomingPairRequest.from,accepted:false});incomingPairRequest=null;$('pairRequestBackdrop').hidden=true;});
+function updatePrivateRoomButton(){const b=$('privateRoomButton');if(!b)return;b.textContent=new URLSearchParams(location.search).get('room')?'Leave private room':'Private room';}
+$('privateRoomButton').addEventListener('click',()=>{const url=new URL(location.href);if(url.searchParams.get('room'))url.searchParams.delete('room');else{const alphabet='abcdefghjkmnpqrstuvwxyz23456789';const bytes=new Uint8Array(6);crypto.getRandomValues(bytes);url.searchParams.set('room',[...bytes].map(b=>alphabet[b%alphabet.length]).join(''));}location.href=url.href;});
 $('generateQrButton').addEventListener('click',async()=>{
   const panel=$('pairQrPanel'),box=$('pairQrImage'); box.replaceChildren();
   const invite=new URL(location.href);
@@ -266,10 +272,11 @@ $('copyButton').addEventListener('click',async()=>{
   catch{const range=document.createRange();range.selectNodeContents($('shareUrl'));const sel=getSelection();sel.removeAllRanges();sel.addRange(range);ui.toast('Select and copy the address');}
 });
 $('clearTransfers').addEventListener('click',()=>{for(const row of [...$('transfersList').children])if(!row.querySelector('button[data-cancel]'))row.remove();if(!$('transfersList').children.length)$('transfersSection').hidden=true;});
-$('transfersList').addEventListener('click',e=>{const b=e.target.closest('[data-cancel]');if(b)transferManager.cancel(b.dataset.cancel);});
-async function setupInfo(){
+$('transfersList').addEventListener('click',e=>{const b=e.target.closest('[data-cancel]');if(b){transferManager.cancel(b.dataset.cancel);return;}const r=e.target.closest('[data-retry]');if(r)transferManager.retrySend(r.dataset.retry);});
+async function init(){
+  let signalUrl=null;
   try{
-    const res=await fetch('/api/info');const info=await res.json();mode=info.mode||'local';ui.setStatus('Connected',mode);
+    const res=await fetch('/api/info');const info=await res.json();mode=info.mode||'local';signalUrl=info.signal||null;
     if(mode==='local'){
       const host=info.urls?.[0];
       if(host){
@@ -280,8 +287,12 @@ async function setupInfo(){
       }else ui.showShare(location.href,null);
     }
   }catch{mode='local';}
+  startSignaling(signalUrl);
+  const roomCode=new URLSearchParams(location.search).get('room');
+  if(roomCode)ui.toast(`Private room "${roomCode}" — share this page's link or QR code so the other device joins the same room.`);
+  updatePrivateRoomButton();
 }
-setupInfo();
+init();
 
 
 let lastRuntimeError = '';

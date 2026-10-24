@@ -26,3 +26,14 @@ exports.roomFor = (req, mode, code) => {
   const ip = forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress;
   return 'ip:' + crypto.createHash('sha256').update(ip || 'unknown').digest('hex').slice(0, 16);
 };
+// ICE configuration shared by the signaling hello message and /api/info.
+// TURN is optional but strongly recommended for production: without it,
+// direct WebRTC connections fail on many networks (symmetric NAT, campus
+// firewalls) and transfers fall back to the slower server relay.
+exports.iceConfig = mode => {
+  if (mode !== 'online') return { stun: null, turn: null };
+  const turn = process.env.TURN_URL
+    ? { urls: process.env.TURN_URL, username: process.env.TURN_USERNAME || '', credential: process.env.TURN_CREDENTIAL || '' }
+    : null;
+  return { stun: process.env.STUN_URL || 'stun:stun.l.google.com:19302', turn };
+};

@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="/css/style.css?v=20261012-4">
+  <link rel="stylesheet" href="/css/style.css?v=20261024-1">
   <title>NearSend — Send files nearby</title>
 </head>
 <body>
@@ -48,7 +48,7 @@
       <p class="drop-hint">You can select multiple files. Then choose a device below.</p>
     </section>
     <section class="devices-section">
-      <div class="section-head devices-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2><span id="connectionLabel" class="connection-label">Connecting…</span></div><div class="pair-actions"><button id="generateQrButton" class="button secondary" type="button">Generate QR Code</button><button id="scanQrButton" class="button primary" type="button">Scan QR Code</button></div></div>
+      <div class="section-head devices-head"><div><p class="section-label">AVAILABLE NEARBY</p><h2>Devices <span id="deviceCount" class="count">0</span></h2><span id="connectionLabel" class="connection-label">Connecting…</span></div><div class="pair-actions"><button id="privateRoomButton" class="button secondary" type="button">Private room</button><button id="generateQrButton" class="button secondary" type="button">Generate QR Code</button><button id="scanQrButton" class="button primary" type="button">Scan QR Code</button></div></div>
       <section id="pairQrPanel" class="pair-qr-panel" hidden><div class="pair-qr-content"><div><h3 id="pairQrTitle">Pair with NearSend</h3><p id="pairQrHelp">Let the other device scan this code to open the same NearSend room.</p></div><div id="pairQrImage" class="pair-qr-image"></div></div><button id="closeQrButton" class="button secondary" type="button">Close</button></section>
       <input id="qrCameraInput" type="file" accept="image/*" capture="environment" hidden>
       <section id="connectionSkeleton" class="connection-skeleton" aria-live="polite" aria-label="Loading nearby devices" hidden>
@@ -105,7 +105,7 @@
   </div>
   <div id="pairRequestBackdrop" class="backdrop" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="pairRequestTitle"><p class="section-label">DEVICE PAIRING</p><h2 id="pairRequestTitle">Connection request</h2><p id="pairRequestText" class="dialog-description"></p><div class="dialog-actions"><button id="rejectPairButton" class="button secondary" type="button">Reject</button><button id="acceptPairButton" class="button primary" type="button">Accept & connect</button></div></section></div>
   <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
-  <script type="module" src="/js/app.js?v=20261012-4"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.js" defer></script>
+  <script type="module" src="/js/app.js?v=20261024-1"></script>
 </body>
 </html>

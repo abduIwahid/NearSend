@@ -4,7 +4,7 @@ const { WebSocketServer } = require('ws');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const { attach } = require('./signaling');
-const { lanUrls } = require('./util');
+const { lanUrls, iceConfig } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
 const MODE = process.env.MODE === 'online' ? 'online' : 'local';
@@ -25,10 +25,11 @@ app.get('/api/qr', async (req, res) => {
   try { res.type('text/plain').send(await QRCode.toDataURL(text, { margin: 1, width: 180, color: { dark: '#111111', light: '#ffffff' } })); }
   catch { res.status(500).send('QR generation failed'); }
 });
-app.get('/api/info', (_, res) => res.json({
+app.get('/api/info', (_, res) => { const ice = iceConfig(MODE); res.json({
   mode: MODE, urls: MODE === 'local' ? lanUrls(PORT) : [],
-  stun: MODE === 'online' ? (process.env.STUN_URL || 'stun:stun.l.google.com:19302') : null
-}));
+  stun: ice.stun, turn: ice.turn,
+  signal: process.env.SIGNAL_WS_URL || null
+});});
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, maxPayload: 128 * 1024 });
 attach(wss, { mode: MODE });

@@ -1,4 +1,4 @@
-const { randomId, randomName, deviceType, roomFor } = require('./util');
+const { randomId, randomName, deviceType, roomFor, iceConfig } = require('./util');
 const rooms = new Map();
 const send = (ws, obj) => { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); };
 
@@ -12,6 +12,7 @@ function broadcast(room) {
   }
 }
 exports.attach = (wss, { mode }) => {
+  const ice = iceConfig(mode);
   const connectionCounts = new Map();
   wss.on('connection', (ws, req) => {
     const ip = req.socket.remoteAddress || 'unknown';
@@ -25,7 +26,7 @@ exports.attach = (wss, { mode }) => {
     if (!rooms.has(room)) rooms.set(room, new Map());
     rooms.get(room).set(peer.id, peer);
     send(ws, { type: 'hello', id: peer.id, name: peer.name, deviceType: peer.type,
-      stun: mode === 'online' ? (process.env.STUN_URL || 'stun:stun.l.google.com:19302') : null });
+      stun: ice.stun, turn: ice.turn });
     broadcast(room);
     ws.on('pong', () => { peer.alive = true; });
     ws.on('message', (data, isBinary) => {
