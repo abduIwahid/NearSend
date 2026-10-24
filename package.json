@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node test/signaling.test.js"
+    "test": "node test/signaling.test.js",
+    "test:remote": "node test/signaling-remote.test.js"
   },
   "dependencies": {
     "express": "^4.21.2",
