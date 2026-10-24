@@ -233,6 +233,15 @@ async def ws_endpoint(ws: WebSocket):
 # --------------------------------------------------------------- Space front
 try:
     import gradio as gr
+    import spaces
+
+    # ZeroGPU (the only free hardware for Gradio Spaces) refuses to start a
+    # Space unless it detects at least one @spaces.GPU function. The
+    # signaling server itself is pure CPU - this tiny probe exists so the
+    # detector passes; it is wired to the status button on the Space page.
+    @spaces.GPU(duration=10)
+    def gpu_warmup():
+        return 'Signaling server is up. (The server runs on CPU; this check only proves the Space is awake.)'
 
     with gr.Blocks() as demo:
         gr.Markdown(
@@ -243,6 +252,9 @@ try:
             "Open the app: https://share-any-file.vercel.app  \n"
             "Source: https://github.com/abduIwahid/NearSend"
         )
+        status_btn = gr.Button('Check server status')
+        status_out = gr.Textbox(label='Status', interactive=False)
+        status_btn.click(gpu_warmup, outputs=status_out)
     app = gr.mount_gradio_app(app, demo, path='/')
 except ImportError:
     @app.get('/', response_class=PlainTextResponse)
