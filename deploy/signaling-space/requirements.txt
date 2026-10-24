@@ -1,4 +1,4 @@
-gradio
+gradio==5.50.0
 spaces
 fastapi
 uvicorn

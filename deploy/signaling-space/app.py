@@ -9,8 +9,9 @@ framing (8-byte target-id prefix), same limits (20 connections/min/IP,
 it just connects here via SIGNAL_WS_URL instead of the same-origin /api/ws.
 
 Runs as a FastAPI app so a small Gradio page can be mounted next to the
-WebSocket endpoint for the Space landing page. If gradio is not installed
-(local testing), the WebSocket service still runs and / serves plain text.
+WebSocket endpoint for the Space landing page. Built for Gradio 5.x: the
+Space pins sdk_version 5.50.0 (Gradio 6's internals break ZeroGPU's
+startup detection of @spaces.GPU functions).
 """
 
 import os
@@ -32,6 +33,18 @@ import time
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import PlainTextResponse
+
+import spaces
+
+
+# ZeroGPU (the only free hardware for Gradio Spaces) kills a Space at
+# startup unless it detects a @spaces.GPU function. The signaling server
+# is pure CPU, so this dummy exists only to pass that check - it is
+# intentionally unused. (Placement matters: right after the imports is
+# the arrangement known to be detected.)
+@spaces.GPU(duration=1)
+def _zerogpu_dummy():
+    return None
 
 # ---------------------------------------------------------------- util (port)
 ADJ = ['Grey', 'Quiet', 'Swift', 'Calm', 'Bright', 'Plain', 'Steady', 'Silver']
@@ -231,21 +244,9 @@ async def ws_endpoint(ws: WebSocket):
 
 
 # --------------------------------------------------------------- Space front
-# NOTE: gradio/spaces are imported at plain top level on purpose - the
-# ZeroGPU startup detector only sees top-level definitions; the same code
-# nested inside a try block was invisible to it and the Space was killed
-# with "No @spaces.GPU function detected during startup".
+# NOTE: the landing page is a plain gradio mount; the ZeroGPU dummy
+# function lives at the top of this file, next to the imports.
 import gradio as gr
-import spaces
-
-
-# ZeroGPU (the only free hardware for Gradio Spaces) refuses to start a
-# Space unless it detects a @spaces.GPU function. The signaling server
-# itself is pure CPU - this tiny probe exists so the detector passes;
-# it is wired to the status button on the Space page.
-@spaces.GPU(duration=10)
-def gpu_warmup():
-    return 'Signaling server is up. (The server runs on CPU; this check only proves the Space is awake.)'
 
 
 with gr.Blocks() as demo:
@@ -257,9 +258,6 @@ with gr.Blocks() as demo:
         "Open the app: https://share-any-file.vercel.app  \n"
         "Source: https://github.com/abduIwahid/NearSend"
     )
-    status_btn = gr.Button('Check server status')
-    status_out = gr.Textbox(label='Status', interactive=False)
-    status_btn.click(gpu_warmup, outputs=status_out)
 app = gr.mount_gradio_app(app, demo, path='/')
 
 
