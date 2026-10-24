@@ -264,7 +264,12 @@ app = gr.mount_gradio_app(app, demo, path='/')
 if __name__ == '__main__':
     import uvicorn
 
-    port = int(os.environ.get('PORT') or os.environ.get('GRADIO_SERVER_PORT') or 7860)
+    # Port is FIXED at 7860, the Hugging Face Spaces contract. Do NOT read
+    # GRADIO_SERVER_PORT here: on the Space it points at 7861, which the
+    # platform's own component already occupies - uvicorn died at startup
+    # with "[Errno 98] address already in use" (seen in the Space's
+    # container logs, 2026-10-24). NEARSEND_PORT exists only for local tests.
+    port = int(os.environ.get('NEARSEND_PORT') or 7860)
     # ws_ping_interval/timeout mirror the Node server's 15 s heartbeat:
     # dead peers are dropped by the server instead of lingering in rooms.
     uvicorn.run(app, host='0.0.0.0', port=port,
