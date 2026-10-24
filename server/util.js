@@ -5,7 +5,13 @@ const ADJ = ['Grey','Quiet','Swift','Calm','Bright','Plain','Steady','Silver'];
 const ANI = ['Panda','Fox','Heron','Otter','Falcon','Lynx','Badger','Crane'];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 exports.randomName = () => `${pick(ADJ)} ${pick(ANI)}`;
-exports.randomId = () => crypto.randomBytes(6).toString('base64url').slice(0, 8).toLowerCase().replace(/[^a-z0-9]/g, 'x');
+exports.randomId = () => {
+  // Relay frames pad the sender id with 'x' to 8 bytes and receivers strip
+  // trailing 'x' - so a minted id must never end in 'x' itself.
+  let id;
+  do { id = crypto.randomBytes(6).toString('base64url').slice(0, 8).toLowerCase().replace(/[^a-z0-9]/g, 'x'); } while (id.endsWith('x'));
+  return id;
+};
 exports.deviceType = ua => {
   ua = (ua || '').toLowerCase();
   if (/ipad|tablet/.test(ua)) return 'tablet';

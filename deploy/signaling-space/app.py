@@ -13,6 +13,15 @@ WebSocket endpoint for the Space landing page. If gradio is not installed
 (local testing), the WebSocket service still runs and / serves plain text.
 """
 
+import os
+
+# The host may inject proxy variables (e.g. NO_PROXY containing bracketed
+# IPv6 entries) that crash httpx while gradio is importing. This service
+# makes no outbound HTTP calls, so drop them before anything imports httpx.
+for _v in ('http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY',
+           'all_proxy', 'ALL_PROXY', 'no_proxy', 'NO_PROXY'):
+    os.environ.pop(_v, None)
+
 import asyncio
 import base64
 import hashlib
@@ -38,8 +47,14 @@ def random_name():
 
 
 def random_id():
-    raw = base64.urlsafe_b64encode(os.urandom(6)).decode('ascii')[:8].lower()
-    return re.sub(r'[^a-z0-9]', 'x', raw)
+    # Relay frames pad the sender id with 'x' to 8 bytes and receivers strip
+    # trailing 'x' - so a minted id must never end in 'x' itself, or it
+    # would decode truncated on the other side.
+    while True:
+        raw = base64.urlsafe_b64encode(os.urandom(6)).decode('ascii')[:8].lower()
+        rid = re.sub(r'[^a-z0-9]', 'x', raw)
+        if not rid.endswith('x'):
+            return rid
 
 
 def device_type(ua):
